@@ -1,3 +1,11 @@
+### Custom
+.idea
+.settings
+aws-java-sdk*
+image.id
+instance.id
+instance.dns
+
 ### Maven
 target/
 pom.xml.tag
