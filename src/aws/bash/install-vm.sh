@@ -7,7 +7,7 @@ cmd="sudo yum update -y; sudo yum install java-11-amazon-corretto.x86_64 -y;"
 ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ec2-user@$(cat instance.dns) $cmd
 
 # Install web server.
-scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH $DIR/../res/WebServer.java ec2-user@$(cat instance.dns):
+scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH $DIR/../java/WebServer.java ec2-user@$(cat instance.dns):
 
 # Build web server.
 cmd="javac WebServer.java"

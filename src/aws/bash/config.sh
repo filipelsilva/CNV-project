@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+export DIR
 
-# export PATH=<path to aws installation>:$PATH
 export AWS_DEFAULT_REGION=us-east-1
 export AWS_ACCOUNT_ID=852177647033
 export AWS_ACCESS_KEY_ID=put-something-here
