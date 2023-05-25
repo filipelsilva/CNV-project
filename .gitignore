@@ -5,6 +5,7 @@ aws-java-sdk*
 image.id
 instance.id
 instance.dns
+*.pem
 
 ### Maven
 target/
