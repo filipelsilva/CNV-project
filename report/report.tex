@@ -2,7 +2,7 @@
 
 % ================ PACKAGES ====================
 
-\usepackage[a4paper]{geometry}
+\usepackage[a4paper, left=25mm, right=25mm]{geometry}
 \usepackage[base]{babel}
 \usepackage{lipsum}
 
@@ -34,10 +34,63 @@
 
 \begin{document}
 
-\maketitle
-
 \twocolumn
 
-\lipsum
+\maketitle
+
+For the intermediate delivery, we have implemented the following features:
+\begin{itemize}
+    \item Instrumentation of the EcoWork@Cloud workload using a JavassistAgent:
+        in this case we modified the ICount JavassistAgent to be mindful of the
+        multithreaded nature of the workload, saving (locally, for now) the
+        instruction count of every thread in a map;
+    \item Scripts to create the image and deploy/terminate deployment in AWS,
+        along with load balancer and auto scaler provided by AWS.
+\end{itemize}
+
+For the final delivery, the following goals apply:
+\begin{itemize}
+    \item Update the (already) modified ICount JavassistAgent to send its
+        statistics to DynamoDB (just periodically, to keep performance), so that
+        multiple runs can be better distributed across nodes;
+    \item Implement a load balancer in Java that uses the information gained
+        from ICount (retrieved from DynamoDB) to distribute the load across
+        nodes;
+    \item Implement an auto scaler in Java that uses the CPU utilizations of the
+        various nodes to determine if a node needs creating/destroying.
+\end{itemize}
+
+Regarding the load balancer, our goal is to distribute the load as evenly as
+possible across all nodes, in order to keep the number of nodes spawned at a
+minimum. It can also choose to serve a request using a Lambda instead of a
+nodes: this option is more expensive, however it makes up for it for the speed
+in startup. Especially when the system is under load and more requests are being
+made while the LB spawns more nodes, Lambdas will be a good option to support
+users while the system is still trying to scale up.
+
+For the metrics used by the load balancer, we will keep in mind the number of
+instructions executed per request, with different granularity based on the
+workload that is provided:
+
+\begin{itemize}
+    \item \textit{Image Compression} - there are 3 image formats: PNG, JPEG and
+        BMP. We will keep a record of the number of instructions per image size,
+        per compression factor and format;
+    \item \textit{Foxes and Rabbits} - we will keep a record of number of
+        instructions per generation, per world (the generation doesn't matter
+        much in this case);
+    \item \textit{Insect Wars} - we will keep a record of number of instructions
+        per round, per number of insects (total) and ratio between the numbers
+        of each army.
+\end{itemize}
+
+Regarding the auto scaler, the metric we will keep in mind is the average CPU
+utilization of each node: if the system detects that more requests are being
+made and the CPU utilization is above a certain threshold, it will spawn a new
+node. Likewise, if the CPU utilization is below a certain threshold, it will
+destroy nodes, in order to keep the cost of running as low as possible. The
+algorithm will scale up by creating new nodes, and scale down by marking the
+nodes it wants to destroy for termination, however they can only be terminated
+once there are no more requests being served by them.
 
 \end{document}
