@@ -1,5 +1,6 @@
 package pt.ulisboa.tecnico.cnv.javassist.tools;
 
+import java.awt.image.BufferedImage;
 import java.lang.Thread;
 import java.util.HashMap;
 import java.util.List;
@@ -42,11 +43,36 @@ public class ICount extends CodeDumper {
         System.out.println(String.format("[%s %s] Number of executed instructions per thread: %s", ICount.class.getSimpleName(), name, ninstsPerThread));
     }
 
+    public static void treatImageCompression(BufferedImage bi, String targetFormat, float compressionQuality) {
+        System.out.println(String.format("[%s ImageCompression] Image size is %sx%s", ICount.class.getSimpleName(), bi.getWidth(), bi.getHeight()));
+        System.out.println(String.format("[%s ImageCompression] Target format is %s", ICount.class.getSimpleName(), targetFormat));
+        System.out.println(String.format("[%s ImageCompression] Compression quality is %s", ICount.class.getSimpleName(), compressionQuality));
+    }
+
+    public static void treatFoxesAndRabbits(int n_generations) {
+        // TODO ir buscar world
+        System.out.println(String.format("[%s Foxes And Rabbits] Number of generations is %s", ICount.class.getSimpleName(), n_generations));
+    }
+
+    public static void treatInsectWars(int max, int sz1, int sz2) {
+        System.out.println(String.format("[%s Insect Wars] Max simulation rounds is %s", ICount.class.getSimpleName(), max));
+        System.out.println(String.format("[%s Insect Wars] Army 1 size is %s", ICount.class.getSimpleName(), sz1));
+        System.out.println(String.format("[%s Insect Wars] Army 2 size is %s", ICount.class.getSimpleName(), sz2));
+    }
+
     @Override
     protected void transform(CtBehavior behavior) throws Exception {
         super.transform(behavior);
-        if (behavior.getName().equals("process") || behavior.getName().equals("runSimulation") || behavior.getName().equals("war")) {
-            behavior.insertAfter(String.format("%s.printStatistics(\"%s\");", ICount.class.getName(), behavior.getName()));
+        switch (behavior.getName()) {
+            case "process":
+                behavior.insertAfter(String.format("%s.treatImageCompression($1, $2, $3);", ICount.class.getName()));
+                break;
+            case "runSimulation":
+                behavior.insertAfter(String.format("%s.treatFoxesAndRabbits($1);", ICount.class.getName()));
+                break;
+            case "war":
+                behavior.insertAfter(String.format("%s.treatInsectWars($1, $2, $3);", ICount.class.getName()));
+                break;
         }
     }
 
