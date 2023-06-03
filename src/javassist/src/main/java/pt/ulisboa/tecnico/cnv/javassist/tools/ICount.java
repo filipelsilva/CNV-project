@@ -8,56 +8,63 @@ import java.util.Map;
 
 import javassist.CannotCompileException;
 import javassist.CtBehavior;
-import javassist.CtClass;
 
 public class ICount extends CodeDumper {
 
-    /**
-     * Number of executed basic blocks.
-     */
-    private static long nblocks = 0;
-
-    /**
-     * Number of executed instructions.
-     */
-    private static long ninsts = 0;
-
-    /**
-      * Map of executed instructions per thread.
-      */
+    private static int worldFoxesRabbits = 0;
     private static Map<Integer, Long> ninstsPerThread = new HashMap<>();
 
     public ICount(List<String> packageNameList, String writeDestination) {
         super(packageNameList, writeDestination);
     }
 
-    public static void incBasicBlock(int position, int length, int threadID) {
-        nblocks++;
-        ninsts += length;
+    public static void setThreadInfo(int position, int length, int threadID) {
         ninstsPerThread.put(threadID, ninstsPerThread.getOrDefault(threadID, 0L) + length);
     }
 
-    public static void printStatistics(String name) {
-        System.out.println(String.format("[%s %s] Number of executed basic blocks: %s", ICount.class.getSimpleName(), name, nblocks));
-        System.out.println(String.format("[%s %s] Number of executed instructions: %s", ICount.class.getSimpleName(), name, ninsts));
-        System.out.println(String.format("[%s %s] Number of executed instructions per thread: %s", ICount.class.getSimpleName(), name, ninstsPerThread));
+    public static Long getThreadInfo(int threadID) {
+        return ninstsPerThread.get(threadID);
     }
 
-    public static void treatImageCompression(BufferedImage bi, String targetFormat, float compressionQuality) {
-        System.out.println(String.format("[%s ImageCompression] Image size is %sx%s", ICount.class.getSimpleName(), bi.getWidth(), bi.getHeight()));
-        System.out.println(String.format("[%s ImageCompression] Target format is %s", ICount.class.getSimpleName(), targetFormat));
-        System.out.println(String.format("[%s ImageCompression] Compression quality is %s", ICount.class.getSimpleName(), compressionQuality));
+    public static void clearThreadInfo(int threadID) {
+        ninstsPerThread.remove(threadID);
     }
 
-    public static void treatFoxesAndRabbits(int n_generations) {
-        // TODO ir buscar world
+
+    public static void setWorldFoxesRabbits(int newWorldFoxesRabbits) {
+        worldFoxesRabbits = newWorldFoxesRabbits;
+    }
+
+    public static void treatImageCompression(BufferedImage bi, String targetFormat, float compressionQuality, int threadID) {
+        System.out.println(String.format("[%s Image Compression] Image size is %sx%s", ICount.class.getSimpleName(), bi.getWidth(), bi.getHeight()));
+        System.out.println(String.format("[%s Image Compression] Target format is %s", ICount.class.getSimpleName(), targetFormat));
+        System.out.println(String.format("[%s Image Compression] Compression quality is %s", ICount.class.getSimpleName(), compressionQuality));
+        System.out.println(String.format("[%s Image Compression] ThreadID is %s", ICount.class.getSimpleName(), threadID));
+        System.out.println(String.format("[%s Image Compression] Number of instructions ran is %s", ICount.class.getSimpleName(), getThreadInfo(threadID)));
+
+        // Reset the number of instructions per thread for this thread
+        clearThreadInfo(threadID);
+    }
+
+    public static void treatFoxesAndRabbits(int n_generations, int threadID) {
+        System.out.println(String.format("[%s Foxes And Rabbits] World is %s", ICount.class.getSimpleName(), worldFoxesRabbits));
         System.out.println(String.format("[%s Foxes And Rabbits] Number of generations is %s", ICount.class.getSimpleName(), n_generations));
+        System.out.println(String.format("[%s Foxes And Rabbits] ThreadID is %s", ICount.class.getSimpleName(), threadID));
+        System.out.println(String.format("[%s Foxes And Rabbits] Number of instructions ran is %s", ICount.class.getSimpleName(), getThreadInfo(threadID)));
+
+        // Reset the number of instructions per thread for this thread
+        clearThreadInfo(threadID);
     }
 
-    public static void treatInsectWars(int max, int sz1, int sz2) {
+    public static void treatInsectWars(int max, int sz1, int sz2, int threadID) {
         System.out.println(String.format("[%s Insect Wars] Max simulation rounds is %s", ICount.class.getSimpleName(), max));
         System.out.println(String.format("[%s Insect Wars] Army 1 size is %s", ICount.class.getSimpleName(), sz1));
         System.out.println(String.format("[%s Insect Wars] Army 2 size is %s", ICount.class.getSimpleName(), sz2));
+        System.out.println(String.format("[%s Insect Wars] ThreadID is %s", ICount.class.getSimpleName(), threadID));
+        System.out.println(String.format("[%s Insect Wars] Number of instructions ran is %s", ICount.class.getSimpleName(), getThreadInfo(threadID)));
+
+        // Reset the number of instructions per thread for this thread
+        clearThreadInfo(threadID);
     }
 
     @Override
@@ -65,13 +72,16 @@ public class ICount extends CodeDumper {
         super.transform(behavior);
         switch (behavior.getName()) {
             case "process":
-                behavior.insertAfter(String.format("%s.treatImageCompression($1, $2, $3);", ICount.class.getName()));
+                behavior.insertAfter(String.format("%s.treatImageCompression($1, $2, $3, %s);", ICount.class.getName(), Thread.currentThread().getId()));
+                break;
+            case "populate":
+                behavior.insertAfter(String.format("%s.setWorldFoxesRabbits($1);", ICount.class.getName()));
                 break;
             case "runSimulation":
-                behavior.insertAfter(String.format("%s.treatFoxesAndRabbits($1);", ICount.class.getName()));
+                behavior.insertAfter(String.format("%s.treatFoxesAndRabbits($1, %s);", ICount.class.getName(), Thread.currentThread().getId()));
                 break;
             case "war":
-                behavior.insertAfter(String.format("%s.treatInsectWars($1, $2, $3);", ICount.class.getName()));
+                behavior.insertAfter(String.format("%s.treatInsectWars($1, $2, $3, %s);", ICount.class.getName(), Thread.currentThread().getId()));
                 break;
         }
     }
@@ -79,7 +89,7 @@ public class ICount extends CodeDumper {
     @Override
     protected void transform(BasicBlock block) throws CannotCompileException {
         super.transform(block);
-        block.behavior.insertAt(block.line, String.format("%s.incBasicBlock(%s, %s, %s);", ICount.class.getName(),
+        block.behavior.insertAt(block.line, String.format("%s.setThreadInfo(%s, %s, %s);", ICount.class.getName(),
                 block.getPosition(), block.getLength(), Thread.currentThread().getId()));
     }
 }
