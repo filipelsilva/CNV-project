@@ -1,3 +1,5 @@
+package pt.ulisboa.tecnico.cnv.lbas.AutoScaler;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -56,26 +58,26 @@ public class EC2MeasureCPU {
                     System.out.println("running instance id = " + iid);
                     instanceDimension.setValue(iid);
                     GetMetricStatisticsRequest request = new GetMetricStatisticsRequest().withStartTime(new Date(new Date().getTime() - OBS_TIME))
-                                                                                         .withNamespace("AWS/EC2")
-                                                                                         .withPeriod(60)
-                                                                                         .withMetricName("CPUUtilization")
-                                                                                         .withStatistics("Average")
-                                                                                         .withDimensions(instanceDimension)
-                                                                                         .withEndTime(new Date());
-                     for (Datapoint dp : cloudWatch.getMetricStatistics(request).getDatapoints()) {
-                       System.out.println(" CPU utilization for instance " + iid + " = " + dp.getAverage());
-                     }
-                 }
-                 else {
+                        .withNamespace("AWS/EC2")
+                        .withPeriod(60)
+                        .withMetricName("CPUUtilization")
+                        .withStatistics("Average")
+                        .withDimensions(instanceDimension)
+                        .withEndTime(new Date());
+                    for (Datapoint dp : cloudWatch.getMetricStatistics(request).getDatapoints()) {
+                        System.out.println(" CPU utilization for instance " + iid + " = " + dp.getAverage());
+                    }
+                }
+                else {
                     System.out.println("instance id = " + iid);
-                 }
+                }
                 System.out.println("Instance State : " + state +".");
             }
         } catch (AmazonServiceException ase) {
-                System.out.println("Caught Exception: " + ase.getMessage());
-                System.out.println("Reponse Status Code: " + ase.getStatusCode());
-                System.out.println("Error Code: " + ase.getErrorCode());
-                System.out.println("Request ID: " + ase.getRequestId());
+            System.out.println("Caught Exception: " + ase.getMessage());
+            System.out.println("Reponse Status Code: " + ase.getStatusCode());
+            System.out.println("Error Code: " + ase.getErrorCode());
+            System.out.println("Request ID: " + ase.getRequestId());
         }
     }
 }
