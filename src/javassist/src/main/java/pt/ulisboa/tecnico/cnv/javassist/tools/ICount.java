@@ -8,6 +8,7 @@ import java.util.Map;
 
 import javassist.CannotCompileException;
 import javassist.CtBehavior;
+import pt.ulisboa.tecnico.cnv.javassist.AmazonDynamoDBConnector;
 
 public class ICount extends CodeDumper {
 
@@ -18,18 +19,17 @@ public class ICount extends CodeDumper {
         super(packageNameList, writeDestination);
     }
 
-    public static void setThreadInfo(int position, int length, int threadID) {
-        ninstsPerThread.put(threadID, ninstsPerThread.getOrDefault(threadID, 0L) + length);
-    }
-
     public static Long getThreadInfo(int threadID) {
         return ninstsPerThread.get(threadID);
+    }
+
+    public static void setThreadInfo(int position, int length, int threadID) {
+        ninstsPerThread.put(threadID, ninstsPerThread.getOrDefault(threadID, 0L) + length);
     }
 
     public static void clearThreadInfo(int threadID) {
         ninstsPerThread.remove(threadID);
     }
-
 
     public static void setWorldFoxesRabbits(int newWorldFoxesRabbits) {
         worldFoxesRabbits = newWorldFoxesRabbits;
@@ -42,6 +42,18 @@ public class ICount extends CodeDumper {
         System.out.println(String.format("[%s Image Compression] ThreadID is %s", ICount.class.getSimpleName(), threadID));
         System.out.println(String.format("[%s Image Compression] Number of instructions ran is %s", ICount.class.getSimpleName(), getThreadInfo(threadID)));
 
+        // // Update data on dynamoDB
+        // dynamoDBConnector.putItem(
+        //         "info",
+        //         dynamoDBConnector.newItemImageCompression(
+        //             getThreadInfo(threadID),
+        //             bi.getWidth(),
+        //             bi.getHeight(),
+        //             targetFormat,
+        //             compressionQuality
+        //             )
+        //         );
+
         // Reset the number of instructions per thread for this thread
         clearThreadInfo(threadID);
     }
@@ -51,6 +63,16 @@ public class ICount extends CodeDumper {
         System.out.println(String.format("[%s Foxes And Rabbits] Number of generations is %s", ICount.class.getSimpleName(), n_generations));
         System.out.println(String.format("[%s Foxes And Rabbits] ThreadID is %s", ICount.class.getSimpleName(), threadID));
         System.out.println(String.format("[%s Foxes And Rabbits] Number of instructions ran is %s", ICount.class.getSimpleName(), getThreadInfo(threadID)));
+
+        // // Update data on dynamoDB
+        // dynamoDBConnector.putItem(
+        //         "info",
+        //         dynamoDBConnector.newItemFoxesAndRabbits(
+        //             getThreadInfo(threadID),
+        //             worldFoxesRabbits,
+        //             n_generations
+        //             )
+        //         );
 
         // Reset the number of instructions per thread for this thread
         clearThreadInfo(threadID);
@@ -62,6 +84,17 @@ public class ICount extends CodeDumper {
         System.out.println(String.format("[%s Insect Wars] Army 2 size is %s", ICount.class.getSimpleName(), sz2));
         System.out.println(String.format("[%s Insect Wars] ThreadID is %s", ICount.class.getSimpleName(), threadID));
         System.out.println(String.format("[%s Insect Wars] Number of instructions ran is %s", ICount.class.getSimpleName(), getThreadInfo(threadID)));
+
+        // // Update data on dynamoDB
+        // dynamoDBConnector.putItem(
+        //         "info",
+        //         dynamoDBConnector.newItemInsectWars(
+        //             getThreadInfo(threadID),
+        //             max,
+        //             sz1,
+        //             sz2
+        //             )
+        //         );
 
         // Reset the number of instructions per thread for this thread
         clearThreadInfo(threadID);
