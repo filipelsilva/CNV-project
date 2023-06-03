@@ -17,11 +17,6 @@ public class ICount extends CodeDumper {
     private static long nblocks = 0;
 
     /**
-     * Number of executed methods.
-     */
-    private static long nmethods = 0;
-
-    /**
      * Number of executed instructions.
      */
     private static long ninsts = 0;
@@ -41,12 +36,7 @@ public class ICount extends CodeDumper {
         ninstsPerThread.put(threadID, ninstsPerThread.getOrDefault(threadID, 0L) + length);
     }
 
-    public static void incBehavior(String name) {
-        nmethods++;
-    }
-
     public static void printStatistics(String name) {
-        System.out.println(String.format("[%s %s] Number of executed methods: %s", ICount.class.getSimpleName(), name, nmethods));
         System.out.println(String.format("[%s %s] Number of executed basic blocks: %s", ICount.class.getSimpleName(), name, nblocks));
         System.out.println(String.format("[%s %s] Number of executed instructions: %s", ICount.class.getSimpleName(), name, ninsts));
         System.out.println(String.format("[%s %s] Number of executed instructions per thread: %s", ICount.class.getSimpleName(), name, ninstsPerThread));
@@ -55,8 +45,6 @@ public class ICount extends CodeDumper {
     @Override
     protected void transform(CtBehavior behavior) throws Exception {
         super.transform(behavior);
-        behavior.insertAfter(String.format("%s.incBehavior(\"%s\");", ICount.class.getName(), behavior.getLongName()));
-
         if (behavior.getName().equals("process") || behavior.getName().equals("runSimulation") || behavior.getName().equals("war")) {
             behavior.insertAfter(String.format("%s.printStatistics(\"%s\");", ICount.class.getName(), behavior.getName()));
         }
