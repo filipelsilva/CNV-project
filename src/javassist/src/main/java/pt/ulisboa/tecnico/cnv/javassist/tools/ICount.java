@@ -8,12 +8,13 @@ import java.util.Map;
 
 import javassist.CannotCompileException;
 import javassist.CtBehavior;
-import pt.ulisboa.tecnico.cnv.javassist.AmazonDynamoDBConnector;
+// import pt.ulisboa.tecnico.cnv.javassist.AmazonDynamoDBConnector;
 
 public class ICount extends CodeDumper {
 
     private static int worldFoxesRabbits = 0;
     private static Map<Integer, Long> ninstsPerThread = new HashMap<>();
+    // private static AmazonDynamoDBConnector dynamoDBConnector = new AmazonDynamoDBConnector();
 
     public ICount(List<String> packageNameList, String writeDestination) {
         super(packageNameList, writeDestination);
