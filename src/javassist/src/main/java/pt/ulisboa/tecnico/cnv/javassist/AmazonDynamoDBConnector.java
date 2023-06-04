@@ -39,7 +39,7 @@ public class AmazonDynamoDBConnector {
         try {
             dynamoDB = AmazonDynamoDBClientBuilder.standard()
                 .withCredentials(new EnvironmentVariableCredentialsProvider())
-                .withRegion(AWS_REGION)
+                .withRegion(Regions.US_EAST_1)
                 .build();
 
             // Create a table with a primary hash key named 'name', which holds a string
