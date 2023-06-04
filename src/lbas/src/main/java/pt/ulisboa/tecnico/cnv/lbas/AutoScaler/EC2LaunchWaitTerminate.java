@@ -13,7 +13,7 @@ import com.amazonaws.services.ec2.model.DescribeAvailabilityZonesResult;
 public class EC2LaunchWaitTerminate {
 
     private static String AWS_REGION = "us-east-1";
-    private static String AMI_ID = "ami-0c3380fb1b339e040";
+    private static String AMI_ID = "ami-0eac0f9071ade670d";
     private static String KEY_NAME = "awskeypair";
     private static String SEC_GROUP_ID = "sg-0bd30fee47aed5db8";
 
@@ -33,8 +33,8 @@ public class EC2LaunchWaitTerminate {
          * instances programmatically.
          *
          * In this sample, we use an EC2 client to get a list of all the
-         * availability zones, and all instances sorted by reservation id, then 
-         * create an instance, list existing instances again, wait a minute and 
+         * availability zones, and all instances sorted by reservation id, then
+         * create an instance, list existing instances again, wait a minute and
          * the terminate the started instance.
          */
         try {
@@ -62,7 +62,7 @@ public class EC2LaunchWaitTerminate {
             System.out.println("Terminating the instance.");
             TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
             termInstanceReq.withInstanceIds(newInstanceId);
-            ec2.terminateInstances(termInstanceReq);            
+            ec2.terminateInstances(termInstanceReq);
         } catch (AmazonServiceException ase) {
             System.out.println("Caught Exception: " + ase.getMessage());
             System.out.println("Reponse Status Code: " + ase.getStatusCode());

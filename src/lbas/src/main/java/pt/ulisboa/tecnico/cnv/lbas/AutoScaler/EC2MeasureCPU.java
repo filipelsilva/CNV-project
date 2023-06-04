@@ -14,6 +14,9 @@ import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.Reservation;
+import com.amazonaws.services.ec2.model.RunInstancesRequest;
+import com.amazonaws.services.ec2.model.RunInstancesResult;
+import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder;
 import com.amazonaws.services.cloudwatch.model.Dimension;
@@ -25,6 +28,9 @@ public class EC2MeasureCPU {
 
     private static long OBS_TIME = 1000 * 60 * 2;
     private static String AWS_REGION = "us-east-1";
+    private static String AMI_ID = "ami-0c3380fb1b339e040";
+    private static String KEY_NAME = "awskeypair";
+    private static String SEC_GROUP_ID = "sg-0bd30fee47aed5db8";
 
     private static AmazonEC2 ec2 = AmazonEC2ClientBuilder.standard().withRegion(AWS_REGION).withCredentials(new EnvironmentVariableCredentialsProvider()).build();
     private static AmazonCloudWatch cloudWatch = AmazonCloudWatchClientBuilder.standard().withRegion(AWS_REGION).withCredentials(new EnvironmentVariableCredentialsProvider()).build();
@@ -36,6 +42,42 @@ public class EC2MeasureCPU {
         }
         return instances;
     }
+
+    private static String startNewInstance() {
+        try {
+            System.out.println("Starting a new instance.");
+            RunInstancesRequest runInstancesRequest = new RunInstancesRequest();
+            runInstancesRequest.withImageId(AMI_ID)
+                .withInstanceType("t2.micro")
+                .withMinCount(1)
+                .withMaxCount(1)
+                .withKeyName(KEY_NAME)
+                .withSecurityGroupIds(SEC_GROUP_ID);
+            RunInstancesResult runInstancesResult = ec2.runInstances(runInstancesRequest);
+            String newInstanceId = runInstancesResult.getReservation().getInstances().get(0).getInstanceId();
+            return newInstanceId;
+        } catch (AmazonServiceException ase) {
+            System.out.println("Caught Exception: " + ase.getMessage());
+            System.out.println("Reponse Status Code: " + ase.getStatusCode());
+            System.out.println("Error Code: " + ase.getErrorCode());
+            System.out.println("Request ID: " + ase.getRequestId());
+        }
+    }
+
+    private static void stopInstance(String instanceId) {
+        try {
+            System.out.println("Stopping instance " + instanceId);
+            TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
+            termInstanceReq.withInstanceIds(instanceId);
+            ec2.terminateInstances(termInstanceReq);
+        } catch (AmazonServiceException ase) {
+            System.out.println("Caught Exception: " + ase.getMessage());
+            System.out.println("Reponse Status Code: " + ase.getStatusCode());
+            System.out.println("Error Code: " + ase.getErrorCode());
+            System.out.println("Request ID: " + ase.getRequestId());
+        }
+    }
+
 
     public static void main(String[] args) throws Exception {
         ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
@@ -57,7 +99,7 @@ public class EC2MeasureCPU {
                     String iid = instance.getInstanceId();
                     String state = instance.getState().getName();
                     String amiid = instance.getImageId(); // TODO add check for image id later
-                    if (state.equals("running")) { 
+                    if (state.equals("running")) {
                         System.out.println("running instance id = " + iid);
                         instanceDimension.setValue(iid);
                         GetMetricStatisticsRequest request = new GetMetricStatisticsRequest().withStartTime(new Date(new Date().getTime() - OBS_TIME))
