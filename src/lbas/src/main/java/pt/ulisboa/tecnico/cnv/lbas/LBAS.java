@@ -20,7 +20,7 @@ public class LBAS {
         };
 
         // Run the autoscaler task every 30 seconds
-        executorService.scheduleAtFixedRate(autoscalerTask, 0, 30, TimeUnit.SECONDS);
+        executorService.scheduleAtFixedRate(autoscalerTask, 0, 5, TimeUnit.SECONDS);
 
         // Run the load balancer forever
         // loadBalancer.runForever();

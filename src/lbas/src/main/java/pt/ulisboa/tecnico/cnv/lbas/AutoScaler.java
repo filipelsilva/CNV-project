@@ -27,13 +27,13 @@ import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 
 public class AutoScaler {
 
-    private long OBS_TIME = 1000 * 60 * 2;
-    private String AWS_REGION = "us-east-1";
-    private String AMI_ID = "ami-0c3380fb1b339e040";
-    private String KEY_NAME = "awskeypair";
-    private String SEC_GROUP_ID = "sg-0bd30fee47aed5db8";
-    private Integer MAX_CPU_USAGE = 80;
-    private Integer MIN_CPU_USAGE = 20;
+    private static long OBS_TIME = 1000 * 60 * 20;
+    private static String AWS_REGION = "us-east-1";
+    private static String AMI_ID = "ami-0c3380fb1b339e040";
+    private static String KEY_NAME = "awskeypair";
+    private static String SEC_GROUP_ID = "sg-0bd30fee47aed5db8";
+    private static Integer MAX_CPU_USAGE = 80;
+    private static Integer MIN_CPU_USAGE = 20;
 
     private ConcurrentHashMap<String, Double> instances;
 
@@ -112,13 +112,13 @@ public class AutoScaler {
                 String iid = instance.getInstanceId();
                 String state = instance.getState().getName();
                 String amiid = instance.getImageId(); // TODO add check for image id later
-                if (state.equals("running")) { // && amiid.equals(AMI_ID)) {
+                if (state.equals("running")) { // && amiid.equals(AMI_ID))
                     System.out.println("running instance id = " + iid);
                     instanceDimension.setValue(iid);
                     GetMetricStatisticsRequest request = new GetMetricStatisticsRequest()
                         .withStartTime(new Date(new Date().getTime() - OBS_TIME))
                         .withNamespace("AWS/EC2")
-                        .withPeriod(30)
+                        .withPeriod(60)
                         .withMetricName("CPUUtilization")
                         .withStatistics("Average")
                         .withDimensions(instanceDimension)
@@ -135,46 +135,45 @@ public class AutoScaler {
                         avgCPU += dp.getAverage();
                         System.out.println(" CPU utilization for instance " + iid + " = " + dp.getAverage());
                     }
-                }
-                else {
+                } else {
                     System.out.println("instance id = " + iid);
                 }
                 System.out.println("Instance State : " + state +".");
-                }
+            }
 
-                System.out.println(String.format("Number of instances: %d", instanceCount));
-                System.out.println(String.format("Number of ready instances: %d", instanceAvailableCount));
-                if (instanceCount == 0) {
-                    System.out.println("Starting a new instance.");
-                    // startNewInstance();
+            System.out.println(String.format("Number of instances: %d", instanceCount));
+            System.out.println(String.format("Number of ready instances: %d", instanceAvailableCount));
+            if (instanceCount == 0) {
+                System.out.println("Starting a new instance.");
+                // startNewInstance();
+                return;
+            }
+
+            avgCPU /= instanceAvailableCount;
+            System.out.println("Average CPU utilization = " + avgCPU);
+
+            if (avgCPU < MIN_CPU_USAGE) {
+                System.out.println(String.format("Average CPU utilization is under %d%%", MIN_CPU_USAGE));
+                System.out.println("Stopping an instance.");
+                if (instanceCount == 1) {
+                    System.out.println("Only one instance running. Cannot stop.");
                     return;
                 }
-
-                avgCPU /= instanceAvailableCount;
-                System.out.println("Average CPU utilization = " + avgCPU);
-
-                if (avgCPU < MIN_CPU_USAGE) {
-                    System.out.println(String.format("Average CPU utilization is under %d%%", MIN_CPU_USAGE));
-                    System.out.println("Stopping an instance.");
-                    if (instanceCount == 1) {
-                        System.out.println("Only one instance running. Cannot stop.");
-                        return;
-                    }
-                    // stop the instance with the lowest CPU utilization
-                    // stopInstance(instances.get(instances.size() - 1).getInstanceId());
-                } else if (avgCPU > 80) {
-                    System.out.println(String.format("Average CPU utilization is over %d%%", MAX_CPU_USAGE));
-                    System.out.println("Starting a new instance.");
-                    // startNewInstance();
-                }
-
-            } catch (AmazonServiceException ase) {
-                System.out.println("Caught Exception: " + ase.getMessage());
-                System.out.println("Reponse Status Code: " + ase.getStatusCode());
-                System.out.println("Error Code: " + ase.getErrorCode());
-                System.out.println("Request ID: " + ase.getRequestId());
-            } catch (Exception e) {
-                e.printStackTrace();
+                // stop the instance with the lowest CPU utilization
+                // stopInstance(instances.get(instances.size() - 1).getInstanceId());
+            } else if (avgCPU > 80) {
+                System.out.println(String.format("Average CPU utilization is over %d%%", MAX_CPU_USAGE));
+                System.out.println("Starting a new instance.");
+                // startNewInstance();
             }
+
+        } catch (AmazonServiceException ase) {
+            System.out.println("Caught Exception: " + ase.getMessage());
+            System.out.println("Reponse Status Code: " + ase.getStatusCode());
+            System.out.println("Error Code: " + ase.getErrorCode());
+            System.out.println("Request ID: " + ase.getRequestId());
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
+}
