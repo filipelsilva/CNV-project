@@ -12,7 +12,6 @@ import com.amazonaws.services.ec2.model.DescribeAvailabilityZonesResult;
 
 public class EC2LaunchWaitTerminate {
 
-    // TODO - fill fields with correct values.
     private static String AWS_REGION = "us-east-1";
     private static String AMI_ID = "ami-0c3380fb1b339e040";
     private static String KEY_NAME = "awskeypair";
