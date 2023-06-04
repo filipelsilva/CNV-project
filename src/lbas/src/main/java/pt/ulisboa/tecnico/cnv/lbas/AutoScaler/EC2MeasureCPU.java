@@ -1,15 +1,21 @@
 package pt.ulisboa.tecnico.cnv.lbas.AutoScaler;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.ArrayList;
-import java.util.Date;
+
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
+import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
+import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder;
+import com.amazonaws.services.cloudwatch.model.Datapoint;
+import com.amazonaws.services.cloudwatch.model.Dimension;
+import com.amazonaws.services.cloudwatch.model.GetMetricStatisticsRequest;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import com.amazonaws.services.ec2.model.Instance;
@@ -17,12 +23,6 @@ import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
-import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
-import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder;
-import com.amazonaws.services.cloudwatch.model.Dimension;
-import com.amazonaws.services.cloudwatch.model.Datapoint;
-import com.amazonaws.services.cloudwatch.model.GetMetricStatisticsRequest;
-import com.amazonaws.services.cloudwatch.model.GetMetricStatisticsResult;
 
 public class EC2MeasureCPU {
 
@@ -31,6 +31,8 @@ public class EC2MeasureCPU {
     private static String AMI_ID = "ami-0c3380fb1b339e040";
     private static String KEY_NAME = "awskeypair";
     private static String SEC_GROUP_ID = "sg-0bd30fee47aed5db8";
+    private static Integer MAX_CPU_USAGE = 80;
+    private static Integer MIN_CPU_USAGE = 20;
 
     private static AmazonEC2 ec2 = AmazonEC2ClientBuilder.standard().withRegion(AWS_REGION).withCredentials(new EnvironmentVariableCredentialsProvider()).build();
     private static AmazonCloudWatch cloudWatch = AmazonCloudWatchClientBuilder.standard().withRegion(AWS_REGION).withCredentials(new EnvironmentVariableCredentialsProvider()).build();
@@ -43,8 +45,7 @@ public class EC2MeasureCPU {
         return instances;
     }
 
-    private static String startNewInstance() {
-        String newInstanceId = "";
+    private static void startNewInstance() {
         try {
             System.out.println("Starting a new instance.");
             RunInstancesRequest runInstancesRequest = new RunInstancesRequest();
@@ -55,14 +56,14 @@ public class EC2MeasureCPU {
                 .withKeyName(KEY_NAME)
                 .withSecurityGroupIds(SEC_GROUP_ID);
             RunInstancesResult runInstancesResult = ec2.runInstances(runInstancesRequest);
-            newInstanceId = runInstancesResult.getReservation().getInstances().get(0).getInstanceId();
+            String newInstanceId = runInstancesResult.getReservation().getInstances().get(0).getInstanceId();
+            // TODO add this new instance to the load balancer
         } catch (AmazonServiceException ase) {
             System.out.println("Caught Exception: " + ase.getMessage());
             System.out.println("Reponse Status Code: " + ase.getStatusCode());
             System.out.println("Error Code: " + ase.getErrorCode());
             System.out.println("Request ID: " + ase.getRequestId());
         }
-        return newInstanceId;
     }
 
     private static void stopInstance(String instanceId) {
@@ -71,6 +72,7 @@ public class EC2MeasureCPU {
             TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
             termInstanceReq.withInstanceIds(instanceId);
             ec2.terminateInstances(termInstanceReq);
+            // TODO remove this instance from the load balancer
         } catch (AmazonServiceException ase) {
             System.out.println("Caught Exception: " + ase.getMessage());
             System.out.println("Reponse Status Code: " + ase.getStatusCode());
@@ -84,6 +86,10 @@ public class EC2MeasureCPU {
         ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
         Runnable autoscalerTask = () -> {
             try {
+                Double avgCPU = 0d;
+                Integer instanceAvailableCount = 0;
+                Integer instanceCount = 0;
+
                 System.out.println("===========================================");
                 System.out.println("Checking data...");
                 System.out.println("===========================================");
@@ -100,17 +106,27 @@ public class EC2MeasureCPU {
                     String iid = instance.getInstanceId();
                     String state = instance.getState().getName();
                     String amiid = instance.getImageId(); // TODO add check for image id later
-                    if (state.equals("running")) {
+                    if (state.equals("running")) { // && amiid.equals(AMI_ID)) {
                         System.out.println("running instance id = " + iid);
                         instanceDimension.setValue(iid);
-                        GetMetricStatisticsRequest request = new GetMetricStatisticsRequest().withStartTime(new Date(new Date().getTime() - OBS_TIME))
+                        GetMetricStatisticsRequest request = new GetMetricStatisticsRequest()
+                            .withStartTime(new Date(new Date().getTime() - OBS_TIME))
                             .withNamespace("AWS/EC2")
                             .withPeriod(30)
                             .withMetricName("CPUUtilization")
                             .withStatistics("Average")
                             .withDimensions(instanceDimension)
                             .withEndTime(new Date());
-                        for (Datapoint dp : cloudWatch.getMetricStatistics(request).getDatapoints()) {
+
+                        List<Datapoint> datapoints = cloudWatch.getMetricStatistics(request).getDatapoints();
+
+                        // Because an instance may be running, but still be initializing
+                        instanceCount++;
+                        if (datapoints.size() != 0) {
+                            instanceAvailableCount++;
+                        }
+                        for (Datapoint dp : datapoints) {
+                            avgCPU += dp.getAverage();
                             System.out.println(" CPU utilization for instance " + iid + " = " + dp.getAverage());
                         }
                     }
@@ -119,6 +135,33 @@ public class EC2MeasureCPU {
                     }
                     System.out.println("Instance State : " + state +".");
                 }
+
+                System.out.println(String.format("Number of instances: %d", instanceCount));
+                System.out.println(String.format("Number of ready instances: %d", instanceAvailableCount));
+                if (instanceCount == 0) {
+                    System.out.println("Starting a new instance.");
+                    // startNewInstance();
+                    return;
+                }
+
+                avgCPU /= instanceAvailableCount;
+                System.out.println("Average CPU utilization = " + avgCPU);
+
+                if (avgCPU < MIN_CPU_USAGE) {
+                    System.out.println(String.format("Average CPU utilization is under %d%%", MIN_CPU_USAGE));
+                    System.out.println("Stopping an instance.");
+                    if (instanceCount == 1) {
+                        System.out.println("Only one instance running. Cannot stop.");
+                        return;
+                    }
+                    // stop the instance with the lowest CPU utilization
+                    // stopInstance(instances.get(instances.size() - 1).getInstanceId());
+                } else if (avgCPU > 80) {
+                    System.out.println(String.format("Average CPU utilization is over %d%%", MAX_CPU_USAGE));
+                    System.out.println("Starting a new instance.");
+                    // startNewInstance();
+                }
+
             } catch (AmazonServiceException ase) {
                 System.out.println("Caught Exception: " + ase.getMessage());
                 System.out.println("Reponse Status Code: " + ase.getStatusCode());
