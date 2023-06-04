@@ -130,9 +130,10 @@ public class AutoScaler {
                     instanceCount++;
                     if (datapoints.size() != 0) {
                         instanceAvailableCount++;
+                        avgCPU += datapoints.get(datapoints.size() - 1).getAverage();
+                        System.out.println(" LAST CPU utilization for instance " + iid + " = " + datapoints.get(datapoints.size() - 1).getAverage());
                     }
                     for (Datapoint dp : datapoints) {
-                        avgCPU += dp.getAverage();
                         System.out.println(" CPU utilization for instance " + iid + " = " + dp.getAverage());
                     }
                 } else {
