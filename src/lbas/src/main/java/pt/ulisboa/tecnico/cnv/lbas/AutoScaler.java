@@ -35,12 +35,12 @@ public class AutoScaler {
     private static Integer MAX_CPU_USAGE = 80;
     private static Integer MIN_CPU_USAGE = 20;
 
-    private ConcurrentHashMap<String, Double> instances;
+    private ConcurrentHashMap<Instance, Double> instances;
 
     private AmazonEC2 ec2;
     private AmazonCloudWatch cloudWatch;
 
-    public AutoScaler(ConcurrentHashMap<String, Double> instances) {
+    public AutoScaler(ConcurrentHashMap<Instance, Double> instances) {
         ec2 = AmazonEC2ClientBuilder.standard().withRegion(AWS_REGION).withCredentials(new EnvironmentVariableCredentialsProvider()).build();
         cloudWatch = AmazonCloudWatchClientBuilder.standard().withRegion(AWS_REGION).withCredentials(new EnvironmentVariableCredentialsProvider()).build();
         this.instances = instances;

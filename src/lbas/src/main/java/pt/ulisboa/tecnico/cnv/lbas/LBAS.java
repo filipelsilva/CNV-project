@@ -5,12 +5,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import com.amazonaws.services.ec2.model.Instance;
+
 public class LBAS {
     private static AutoScaler autoScaler;
     // private static LoadBalancer loadBalancer;
 
     public static void main(String[] args) {
-        ConcurrentHashMap<String, Double> instances = new ConcurrentHashMap<String, Double>();
+        ConcurrentHashMap<Instance, Double> instances = new ConcurrentHashMap<>();
         autoScaler = new AutoScaler(instances);
         // loadBalancer = new LoadBalancer(instaces);
 
