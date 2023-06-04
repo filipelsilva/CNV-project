@@ -5,9 +5,9 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>pt.ulisboa.tecnico</groupId>
-  <artifactId>JavassistWrapper</artifactId>
+  <artifactId>LBAS</artifactId>
   <version>1.0</version>
-  <name>JavassistWrapper</name>
+  <name>LBAS</name>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

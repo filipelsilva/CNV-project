@@ -1,10 +1,11 @@
-package pt.ulisboa.tecnico.cnv.lbas.AutoScaler;
+package pt.ulisboa.tecnico.cnv.lbas;
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -24,20 +25,28 @@ import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 
-public class EC2MeasureCPU {
+public class AutoScaler {
 
-    private static long OBS_TIME = 1000 * 60 * 2;
-    private static String AWS_REGION = "us-east-1";
-    private static String AMI_ID = "ami-0c3380fb1b339e040";
-    private static String KEY_NAME = "awskeypair";
-    private static String SEC_GROUP_ID = "sg-0bd30fee47aed5db8";
-    private static Integer MAX_CPU_USAGE = 80;
-    private static Integer MIN_CPU_USAGE = 20;
+    private long OBS_TIME = 1000 * 60 * 2;
+    private String AWS_REGION = "us-east-1";
+    private String AMI_ID = "ami-0c3380fb1b339e040";
+    private String KEY_NAME = "awskeypair";
+    private String SEC_GROUP_ID = "sg-0bd30fee47aed5db8";
+    private Integer MAX_CPU_USAGE = 80;
+    private Integer MIN_CPU_USAGE = 20;
 
-    private static AmazonEC2 ec2 = AmazonEC2ClientBuilder.standard().withRegion(AWS_REGION).withCredentials(new EnvironmentVariableCredentialsProvider()).build();
-    private static AmazonCloudWatch cloudWatch = AmazonCloudWatchClientBuilder.standard().withRegion(AWS_REGION).withCredentials(new EnvironmentVariableCredentialsProvider()).build();
+    private ConcurrentHashMap<String, Double> instances;
 
-    private static Set<Instance> getInstances(AmazonEC2 ec2) throws Exception {
+    private AmazonEC2 ec2;
+    private AmazonCloudWatch cloudWatch;
+
+    public AutoScaler(ConcurrentHashMap<String, Double> instances) {
+        ec2 = AmazonEC2ClientBuilder.standard().withRegion(AWS_REGION).withCredentials(new EnvironmentVariableCredentialsProvider()).build();
+        cloudWatch = AmazonCloudWatchClientBuilder.standard().withRegion(AWS_REGION).withCredentials(new EnvironmentVariableCredentialsProvider()).build();
+        this.instances = instances;
+    }
+
+    private Set<Instance> getInstances(AmazonEC2 ec2) throws Exception {
         Set<Instance> instances = new HashSet<Instance>();
         for (Reservation reservation : ec2.describeInstances().getReservations()) {
             instances.addAll(reservation.getInstances());
@@ -45,7 +54,7 @@ public class EC2MeasureCPU {
         return instances;
     }
 
-    private static void startNewInstance() {
+    private void startNewInstance() {
         try {
             System.out.println("Starting a new instance.");
             RunInstancesRequest runInstancesRequest = new RunInstancesRequest();
@@ -66,7 +75,7 @@ public class EC2MeasureCPU {
         }
     }
 
-    private static void stopInstance(String instanceId) {
+    private void stopInstance(String instanceId) {
         try {
             System.out.println("Stopping instance " + instanceId);
             TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
@@ -81,59 +90,56 @@ public class EC2MeasureCPU {
         }
     }
 
+    public void analyseInstances() {
+        try {
+            Double avgCPU = 0d;
+            Integer instanceAvailableCount = 0;
+            Integer instanceCount = 0;
 
-    public static void main(String[] args) throws Exception {
-        ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
-        Runnable autoscalerTask = () -> {
-            try {
-                Double avgCPU = 0d;
-                Integer instanceAvailableCount = 0;
-                Integer instanceCount = 0;
+            System.out.println("===========================================");
+            System.out.println("Checking data...");
+            System.out.println("===========================================");
 
-                System.out.println("===========================================");
-                System.out.println("Checking data...");
-                System.out.println("===========================================");
+            Set<Instance> instances = getInstances(ec2);
+            System.out.println("total instances = " + instances.size());
 
-                Set<Instance> instances = getInstances(ec2);
-                System.out.println("total instances = " + instances.size());
+            Dimension instanceDimension = new Dimension();
+            instanceDimension.setName("InstanceId");
+            List<Dimension> dims = new ArrayList<Dimension>();
+            dims.add(instanceDimension);
 
-                Dimension instanceDimension = new Dimension();
-                instanceDimension.setName("InstanceId");
-                List<Dimension> dims = new ArrayList<Dimension>();
-                dims.add(instanceDimension);
+            for (Instance instance : instances) {
+                String iid = instance.getInstanceId();
+                String state = instance.getState().getName();
+                String amiid = instance.getImageId(); // TODO add check for image id later
+                if (state.equals("running")) { // && amiid.equals(AMI_ID)) {
+                    System.out.println("running instance id = " + iid);
+                    instanceDimension.setValue(iid);
+                    GetMetricStatisticsRequest request = new GetMetricStatisticsRequest()
+                        .withStartTime(new Date(new Date().getTime() - OBS_TIME))
+                        .withNamespace("AWS/EC2")
+                        .withPeriod(30)
+                        .withMetricName("CPUUtilization")
+                        .withStatistics("Average")
+                        .withDimensions(instanceDimension)
+                        .withEndTime(new Date());
 
-                for (Instance instance : instances) {
-                    String iid = instance.getInstanceId();
-                    String state = instance.getState().getName();
-                    String amiid = instance.getImageId(); // TODO add check for image id later
-                    if (state.equals("running")) { // && amiid.equals(AMI_ID)) {
-                        System.out.println("running instance id = " + iid);
-                        instanceDimension.setValue(iid);
-                        GetMetricStatisticsRequest request = new GetMetricStatisticsRequest()
-                            .withStartTime(new Date(new Date().getTime() - OBS_TIME))
-                            .withNamespace("AWS/EC2")
-                            .withPeriod(30)
-                            .withMetricName("CPUUtilization")
-                            .withStatistics("Average")
-                            .withDimensions(instanceDimension)
-                            .withEndTime(new Date());
+                    List<Datapoint> datapoints = cloudWatch.getMetricStatistics(request).getDatapoints();
 
-                        List<Datapoint> datapoints = cloudWatch.getMetricStatistics(request).getDatapoints();
-
-                        // Because an instance may be running, but still be initializing
-                        instanceCount++;
-                        if (datapoints.size() != 0) {
-                            instanceAvailableCount++;
-                        }
-                        for (Datapoint dp : datapoints) {
-                            avgCPU += dp.getAverage();
-                            System.out.println(" CPU utilization for instance " + iid + " = " + dp.getAverage());
-                        }
+                    // Because an instance may be running, but still be initializing
+                    instanceCount++;
+                    if (datapoints.size() != 0) {
+                        instanceAvailableCount++;
                     }
-                    else {
-                        System.out.println("instance id = " + iid);
+                    for (Datapoint dp : datapoints) {
+                        avgCPU += dp.getAverage();
+                        System.out.println(" CPU utilization for instance " + iid + " = " + dp.getAverage());
                     }
-                    System.out.println("Instance State : " + state +".");
+                }
+                else {
+                    System.out.println("instance id = " + iid);
+                }
+                System.out.println("Instance State : " + state +".");
                 }
 
                 System.out.println(String.format("Number of instances: %d", instanceCount));
@@ -170,10 +176,5 @@ public class EC2MeasureCPU {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        };
-
-        // Run the autoscaler task every 30 seconds
-        executorService.scheduleAtFixedRate(autoscalerTask, 0, 30, TimeUnit.SECONDS);
-        // executorService.scheduleAtFixedRate(autoscalerTask, 30, 30, TimeUnit.SECONDS);
+        }
     }
-}

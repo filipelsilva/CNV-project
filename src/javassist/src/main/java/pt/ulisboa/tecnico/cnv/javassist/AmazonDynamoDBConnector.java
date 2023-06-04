@@ -33,15 +33,13 @@ public class AmazonDynamoDBConnector {
 
     private String AWS_REGION = "us-east-1";
 
-    private AmazonDynamoDB dynamoDB;
+    private AmazonDynamoDB dynamoDB = AmazonDynamoDBClientBuilder.standard()
+        .withCredentials(new EnvironmentVariableCredentialsProvider())
+        .withRegion(AWS_REGION)
+        .build();
 
     public void createTable(String tableName) {
         try {
-            dynamoDB = AmazonDynamoDBClientBuilder.standard()
-                .withCredentials(new EnvironmentVariableCredentialsProvider())
-                .withRegion(Regions.US_EAST_1)
-                .build();
-
             // Create a table with a primary hash key named 'name', which holds a string
             CreateTableRequest createTableRequest = new CreateTableRequest().withTableName(tableName)
                 .withKeySchema(new KeySchemaElement().withAttributeName("name").withKeyType(KeyType.HASH))
