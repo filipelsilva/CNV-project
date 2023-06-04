@@ -44,6 +44,7 @@ public class EC2MeasureCPU {
     }
 
     private static String startNewInstance() {
+        String newInstanceId = "";
         try {
             System.out.println("Starting a new instance.");
             RunInstancesRequest runInstancesRequest = new RunInstancesRequest();
@@ -54,14 +55,14 @@ public class EC2MeasureCPU {
                 .withKeyName(KEY_NAME)
                 .withSecurityGroupIds(SEC_GROUP_ID);
             RunInstancesResult runInstancesResult = ec2.runInstances(runInstancesRequest);
-            String newInstanceId = runInstancesResult.getReservation().getInstances().get(0).getInstanceId();
-            return newInstanceId;
+            newInstanceId = runInstancesResult.getReservation().getInstances().get(0).getInstanceId();
         } catch (AmazonServiceException ase) {
             System.out.println("Caught Exception: " + ase.getMessage());
             System.out.println("Reponse Status Code: " + ase.getStatusCode());
             System.out.println("Error Code: " + ase.getErrorCode());
             System.out.println("Request ID: " + ase.getRequestId());
         }
+        return newInstanceId;
     }
 
     private static void stopInstance(String instanceId) {
