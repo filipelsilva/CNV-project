@@ -1,16 +1,25 @@
 package pt.ulisboa.tecnico.cnv.lbas;
 
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
+import javax.imageio.ImageIO;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
@@ -63,9 +72,9 @@ public class LoadBalancer {
             server = HttpServer.create(new InetSocketAddress(8000), 0);
             server.setExecutor(java.util.concurrent.Executors.newCachedThreadPool());
             server.createContext("/test", new TestHandler());
-            server.createContext("/simulate", new RootHandler("FoxesAndRabbits"));
-            server.createContext("/compressimage", new RootHandler("ImageCompression"));
-            server.createContext("/insectwar", new RootHandler("InsectWars"));
+            server.createContext("/simulate", new GetHandler("FoxesAndRabbits"));
+            server.createContext("/compressimage", new PostHandler("ImageCompression"));
+            server.createContext("/insectwar", new GetHandler("InsectWars"));
             server.start();
         } catch (IOException e) {
             e.printStackTrace();
@@ -213,11 +222,11 @@ public class LoadBalancer {
         }
     }
 
-    protected class RootHandler implements HttpHandler {
+    protected class GetHandler implements HttpHandler {
 
         public String whereFrom;
 
-        public RootHandler(String type) {
+        public GetHandler(String type) {
             whereFrom = type;
         }
 
@@ -270,6 +279,46 @@ public class LoadBalancer {
             OutputStream os = t.getResponseBody();
             os.write(response.toString().getBytes());
             os.close();
+        }
+    }
+
+    protected static class PostHandler implements HttpHandler {
+
+        @Override
+        public void handle(HttpExchange t) throws IOException {
+            if (t.getRequestHeaders().getFirst("Origin") != null) {
+                t.getResponseHeaders().add("Access-Control-Allow-Origin", t.getRequestHeaders().getFirst("Origin"));
+            }
+            if (t.getRequestMethod().equalsIgnoreCase("OPTIONS")) {
+                t.getResponseHeaders().add("Access-Control-Allow-Methods", "POST");
+                t.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type,API-Key");
+                t.sendResponseHeaders(204, -1);
+            } else {
+                InputStream stream = t.getRequestBody();
+                // Result syntax: targetFormat:<targetFormat>;compressionFactor:<factor>;data:image/<currentFormat>;base64,<encoded image>
+                String result = new BufferedReader(new InputStreamReader(stream)).lines().collect(Collectors.joining("\n"));
+                String[] resultSplits = result.split(",");
+                String targetFormat = resultSplits[0].split(":")[1].split(";")[0];
+                String compressionFactor = resultSplits[0].split(":")[2].split(";")[0];
+                String output = String.format("data:image/%s;base64,%s", targetFormat, handleRequest(resultSplits[1], targetFormat, Float.parseFloat(compressionFactor)));
+                t.sendResponseHeaders(200, output.length());
+                OutputStream os = t.getResponseBody();
+                os.write(output.getBytes());
+                os.close();
+            }
+        }
+
+        private String handleRequest(String inputEncoded, String format, float compressionFactor) {
+            byte[] decoded = Base64.getDecoder().decode(inputEncoded);
+            try {
+                ByteArrayInputStream bais = new ByteArrayInputStream(decoded);
+                BufferedImage bi = ImageIO.read(bais);
+                // byte[] resultImage = process(bi, format, compressionFactor);
+                byte[] outputEncoded = Base64.getEncoder().encode(resultImage);
+                return new String(outputEncoded);
+            } catch (IOException e) {
+                return e.toString();
+            }
         }
     }
 
