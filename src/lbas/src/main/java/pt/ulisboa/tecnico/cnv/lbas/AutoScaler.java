@@ -167,7 +167,6 @@ public class AutoScaler {
                     System.out.println("Only one instance running. Cannot stop.");
                     return;
                 }
-                stopInstance(instances.iterator().next().getInstanceId());
 
                 // Stop the instance with the lowest CPU utilization
                 Instance instanceWithMaxUsage = instanceUsage.entrySet()
@@ -175,6 +174,7 @@ public class AutoScaler {
                     .max(ConcurrentHashMap.Entry.comparingByValue())
                     .map(ConcurrentHashMap.Entry::getKey)
                     .orElse(null);
+
                 stopInstance(instanceWithMaxUsage);
             } else if (avgCPU > 80) {
                 System.out.println(String.format("Average CPU utilization is over %d%%", MAX_CPU_USAGE));
