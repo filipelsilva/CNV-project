@@ -97,12 +97,6 @@ public class AmazonDynamoDBConnector {
 
     public void getItem(String tableName, Map<String, Condition> scanFilter) {
         try {
-            // Scan items for movies with a year attribute greater than 1985
-            // HashMap<String, Condition> scanFilter = new HashMap<String, Condition>();
-            // Condition condition = new Condition()
-            //     .withComparisonOperator(ComparisonOperator.GT.toString())
-            //     .withAttributeValueList(new AttributeValue().withN("1985"));
-            // scanFilter.put("year", condition);
             ScanRequest scanRequest = new ScanRequest(tableName).withScanFilter(scanFilter);
             ScanResult scanResult = dynamoDB.scan(scanRequest);
             System.out.println("Result: " + scanResult);
@@ -126,27 +120,24 @@ public class AmazonDynamoDBConnector {
     public Map<String, AttributeValue> newItemImageCompression(Long instructions, int width, int height, String format, float compression) {
         Map<String, AttributeValue> item = new HashMap<String, AttributeValue>();
         item.put("type", new AttributeValue("ImageCompression"));
-        item.put("instructions", new AttributeValue().withN(Long.toString(instructions)));
-        item.put("width", new AttributeValue().withN(Long.toString(width)));
-        item.put("height", new AttributeValue().withN(Long.toString(height)));
+        item.put("instructionsPerImageSizePerCompressionFactor", new AttributeValue().withN(Float.toString(instructions/(width*height*compression))));
         item.put("format", new AttributeValue(format));
-        item.put("compression", new AttributeValue().withN(Float.toString(compression)));
         return item;
     }
 
     public Map<String, AttributeValue> newItemFoxesAndRabbits(Long instructions, int world, int generations) {
         Map<String, AttributeValue> item = new HashMap<String, AttributeValue>();
         item.put("type", new AttributeValue("FoxesAndRabbits"));
-        item.put("instructions", new AttributeValue().withN(Long.toString(instructions)));
-        item.put("world", new AttributeValue().withN(Long.toString(world)));
-        item.put("generations", new AttributeValue().withN(Long.toString(generations)));
+        item.put("instructionsPerGeneration", new AttributeValue().withN(Float.toString(instructions/generations)));
+        item.put("world", new AttributeValue().withN(Integer.toString(world)));
         return item;
     }
 
     public Map<String, AttributeValue> newItemInsectWars(Long instructions, int max, int sz1, int sz2) {
         Map<String, AttributeValue> item = new HashMap<String, AttributeValue>();
         item.put("type", new AttributeValue("InsectWars"));
-        item.put("instructions", new AttributeValue().withN(Long.toString(instructions)));
+        // Float param = 
+        // item.put("instructionsTimesRatioPerRoundPerTotal", new AttributeValue().withN(Long.toString(instructions)));
         item.put("max", new AttributeValue().withN(Long.toString(max)));
         item.put("sz1", new AttributeValue().withN(Long.toString(sz1)));
         item.put("sz2", new AttributeValue().withN(Long.toString(sz2)));

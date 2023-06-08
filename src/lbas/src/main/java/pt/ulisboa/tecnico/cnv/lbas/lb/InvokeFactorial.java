@@ -1,4 +1,4 @@
-package pt.ulisboa.tecnico.cnv.lbas.LoadBalancer;
+package pt.ulisboa.tecnico.cnv.lbas.lb;
 
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.services.lambda.LambdaClient;

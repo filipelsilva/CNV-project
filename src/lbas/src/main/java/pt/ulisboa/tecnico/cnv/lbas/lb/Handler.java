@@ -1,4 +1,4 @@
-package pt.ulisboa.tecnico.cnv.lbas.LoadBalancer;
+package pt.ulisboa.tecnico.cnv.lbas.lb;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;

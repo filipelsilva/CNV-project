@@ -14,3 +14,11 @@ project. Name it `awskeypair.pem`.
 3.2. To launch the whole deployment, `./launch-deployment.sh`
 
 3.3. To destroy the whole deployment, `./terminate-deployment.sh`
+
+## Doubts
+
+[ ] Usage of Long/Int in javassist
+[ ] Webserver with image support breaks
+[ ] NullPointerException when running amazondbconnector in icount
+[ ] Stats for InsectWars
+[ ] Handle POST requests in LoadBalancer (for image processing)
