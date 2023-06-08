@@ -35,7 +35,7 @@ public class AutoScaler {
     private static Integer MAX_CPU_USAGE = 80;
     private static Integer MIN_CPU_USAGE = 20;
 
-    private ConcurrentHashMap<Instance, Double> instances;
+    private ConcurrentHashMap<Instance, Double> instanceUsage;
 
     private AmazonEC2 ec2;
     private AmazonCloudWatch cloudWatch;
@@ -43,7 +43,7 @@ public class AutoScaler {
     public AutoScaler(ConcurrentHashMap<Instance, Double> instances) {
         ec2 = AmazonEC2ClientBuilder.standard().withRegion(AWS_REGION).withCredentials(new EnvironmentVariableCredentialsProvider()).build();
         cloudWatch = AmazonCloudWatchClientBuilder.standard().withRegion(AWS_REGION).withCredentials(new EnvironmentVariableCredentialsProvider()).build();
-        this.instances = instances;
+        this.instanceUsage = instances;
     }
 
     private Set<Instance> getInstances(AmazonEC2 ec2) throws Exception {
@@ -65,8 +65,11 @@ public class AutoScaler {
                 .withKeyName(KEY_NAME)
                 .withSecurityGroupIds(SEC_GROUP_ID);
             RunInstancesResult runInstancesResult = ec2.runInstances(runInstancesRequest);
-            String newInstanceId = runInstancesResult.getReservation().getInstances().get(0).getInstanceId();
-            // TODO add this new instance to the load balancer
+
+            // Add instance to map
+            Instance newInstance = runInstancesResult.getReservation().getInstances().get(0);
+            instanceUsage.put(newInstance, 0d);
+
         } catch (AmazonServiceException ase) {
             System.out.println("Caught Exception: " + ase.getMessage());
             System.out.println("Reponse Status Code: " + ase.getStatusCode());
@@ -75,13 +78,17 @@ public class AutoScaler {
         }
     }
 
-    private void stopInstance(String instanceId) {
+    private void stopInstance(Instance instance) {
         try {
+            String instanceId = instance.getInstanceId();
             System.out.println("Stopping instance " + instanceId);
             TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
             termInstanceReq.withInstanceIds(instanceId);
             ec2.terminateInstances(termInstanceReq);
-            // TODO remove this instance from the load balancer
+
+            // Remove this instance from the load balancer
+            instanceUsage.remove(instance);
+
         } catch (AmazonServiceException ase) {
             System.out.println("Caught Exception: " + ase.getMessage());
             System.out.println("Reponse Status Code: " + ase.getStatusCode());
@@ -160,8 +167,15 @@ public class AutoScaler {
                     System.out.println("Only one instance running. Cannot stop.");
                     return;
                 }
-                // stop the instance with the lowest CPU utilization
-                // stopInstance(instances.get(instances.size() - 1).getInstanceId());
+                stopInstance(instances.iterator().next().getInstanceId());
+
+                // Stop the instance with the lowest CPU utilization
+                Instance instanceWithMaxUsage = instanceUsage.entrySet()
+                    .stream()
+                    .max(ConcurrentHashMap.Entry.comparingByValue())
+                    .map(ConcurrentHashMap.Entry::getKey)
+                    .orElse(null);
+                stopInstance(instanceWithMaxUsage);
             } else if (avgCPU > 80) {
                 System.out.println(String.format("Average CPU utilization is over %d%%", MAX_CPU_USAGE));
                 System.out.println("Starting a new instance.");
