@@ -7,7 +7,7 @@ project. Name it `awskeypair.pem`.
 
 2. Run `make` on the root folder (where this README is).
 
-3. `cd src/scripts/bash`
+3. `cd src/scripts`
 
 3.1. To create the image, `./create-image.sh`
 

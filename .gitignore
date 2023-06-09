@@ -52,3 +52,5 @@ buildNumber.properties
 hs_err_pid*
 replay_pid*
 
+# Credential Files
+src/scripts/config.sh
