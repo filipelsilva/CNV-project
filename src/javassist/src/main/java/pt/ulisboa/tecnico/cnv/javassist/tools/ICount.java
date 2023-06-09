@@ -18,7 +18,12 @@ public class ICount extends CodeDumper {
 
     public ICount(List<String> packageNameList, String writeDestination) {
         super(packageNameList, writeDestination);
-        dynamoDBConnector.createTable("info");
+        dynamoDBConnector.createTable("FoxesAndRabbits", "world");
+        dynamoDBConnector.createTable("ImageCompression", "format");
+        dynamoDBConnector.createTable("InsectWars", "maxrounds");
+        dynamoDBConnector.waitForTable("FoxesAndRabbits");
+        dynamoDBConnector.waitForTable("ImageCompression");
+        dynamoDBConnector.waitForTable("InsectWars");
     }
 
     public static Long getThreadInfo(int threadID) {
@@ -46,7 +51,7 @@ public class ICount extends CodeDumper {
 
         // Update data on dynamoDB
         dynamoDBConnector.putItem(
-                "info",
+                "ImageCompression",
                 dynamoDBConnector.newItemImageCompression(
                     getThreadInfo(threadID),
                     bi.getWidth(),
@@ -68,7 +73,7 @@ public class ICount extends CodeDumper {
 
         // Update data on dynamoDB
         dynamoDBConnector.putItem(
-                "info",
+                "FoxesAndRabbits",
                 dynamoDBConnector.newItemFoxesAndRabbits(
                     getThreadInfo(threadID),
                     worldFoxesRabbits,
@@ -89,7 +94,7 @@ public class ICount extends CodeDumper {
 
         // Update data on dynamoDB
         dynamoDBConnector.putItem(
-                "info",
+                "InsectWars",
                 dynamoDBConnector.newItemInsectWars(
                     getThreadInfo(threadID),
                     max,

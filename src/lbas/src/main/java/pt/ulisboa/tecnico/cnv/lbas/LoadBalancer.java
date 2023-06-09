@@ -136,15 +136,11 @@ public class LoadBalancer {
         // Get data from the db
         HashMap<String, Condition> scanFilter = new HashMap<String, Condition>();
 
-        scanFilter.put("type", new Condition()
-                .withComparisonOperator(ComparisonOperator.EQ.toString())
-                .withAttributeValueList(new AttributeValue("FoxesAndRabbits")));
-
         scanFilter.put("world", new Condition()
                 .withComparisonOperator(ComparisonOperator.EQ.toString())
                 .withAttributeValueList(new AttributeValue().withN(Integer.toString(world))));
 
-        ScanResult result = getDynamoDB("info", scanFilter);
+        ScanResult result = getDynamoDB("FoxesAndRabbits", scanFilter);
         return 0;
     }
 
@@ -177,15 +173,11 @@ public class LoadBalancer {
         // Get data from the db
         HashMap<String, Condition> scanFilter = new HashMap<String, Condition>();
 
-        scanFilter.put("type", new Condition()
-                .withComparisonOperator(ComparisonOperator.EQ.toString())
-                .withAttributeValueList(new AttributeValue("ImageCompression")));
-
         // scanFilter.put("format", new Condition()
         // .withComparisonOperator(ComparisonOperator.EQ.toString())
         // .withAttributeValueList(new AttributeValue(format)));
 
-        ScanResult result = getDynamoDB("info", scanFilter);
+        ScanResult result = getDynamoDB("ImageCompression", scanFilter);
         return 0;
     }
 
@@ -197,15 +189,11 @@ public class LoadBalancer {
         // Get data from the db
         HashMap<String, Condition> scanFilter = new HashMap<String, Condition>();
 
-        scanFilter.put("type", new Condition()
-                .withComparisonOperator(ComparisonOperator.EQ.toString())
-                .withAttributeValueList(new AttributeValue("InsectWars")));
-
         // scanFilter.put("format", new Condition()
         // .withComparisonOperator(ComparisonOperator.EQ.toString())
         // .withAttributeValueList(new AttributeValue(format)));
 
-        ScanResult result = getDynamoDB("info", scanFilter);
+        ScanResult result = getDynamoDB("InsectWars", scanFilter);
         return 0;
     }
 

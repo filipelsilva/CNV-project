@@ -38,18 +38,32 @@ public class AmazonDynamoDBConnector {
         .withRegion(AWS_REGION)
         .build();
 
-    public void createTable(String tableName) {
+    public void waitForTable(String tableName) {
         try {
+            // wait for the table to move into ACTIVE state
+            TableUtils.waitUntilActive(dynamoDB, tableName);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void createTable(String tableName, String primaryKey) {
+        try {
+            ScalarAttributeType primary;
+            if (primaryKey.equals("format")) {
+                primary = ScalarAttributeType.S;
+            } else {
+                primary = ScalarAttributeType.N;
+            }
+
             // Create a table with a primary hash key named 'type', which holds a string
             CreateTableRequest createTableRequest = new CreateTableRequest().withTableName(tableName)
-                .withKeySchema(new KeySchemaElement().withAttributeName("type").withKeyType(KeyType.HASH))
-                .withAttributeDefinitions(new AttributeDefinition().withAttributeName("type").withAttributeType(ScalarAttributeType.S))
+                .withKeySchema(new KeySchemaElement().withAttributeName(primaryKey).withKeyType(KeyType.HASH))
+                .withAttributeDefinitions(new AttributeDefinition().withAttributeName(primaryKey).withAttributeType(primary))
                 .withProvisionedThroughput(new ProvisionedThroughput().withReadCapacityUnits(1L).withWriteCapacityUnits(1L));
 
             // Create table if it does not exist yet
             TableUtils.createTableIfNotExists(dynamoDB, createTableRequest);
-            // wait for the table to move into ACTIVE state
-            TableUtils.waitUntilActive(dynamoDB, tableName);
 
         } catch (AmazonServiceException ase) {
             System.out.println("Caught an AmazonServiceException, which means your request made it "
@@ -64,8 +78,6 @@ public class AmazonDynamoDBConnector {
                     + "a serious internal problem while trying to communicate with AWS, "
                     + "such as not being able to access the network.");
             System.out.println("Error Message: " + ace.getMessage());
-        } catch (InterruptedException e) {
-            e.printStackTrace();
         }
     }
 
@@ -119,7 +131,6 @@ public class AmazonDynamoDBConnector {
 
     public Map<String, AttributeValue> newItemImageCompression(Long instructions, int width, int height, String format, float compression) {
         Map<String, AttributeValue> item = new HashMap<String, AttributeValue>();
-        item.put("type", new AttributeValue("ImageCompression"));
         item.put("instructionsPerImageSizePerCompressionFactor", new AttributeValue().withN(Float.toString(instructions/(width*height*compression))));
         item.put("format", new AttributeValue(format));
         return item;
@@ -127,7 +138,6 @@ public class AmazonDynamoDBConnector {
 
     public Map<String, AttributeValue> newItemFoxesAndRabbits(Long instructions, int world, int generations) {
         Map<String, AttributeValue> item = new HashMap<String, AttributeValue>();
-        item.put("type", new AttributeValue("FoxesAndRabbits"));
         item.put("instructionsPerGeneration", new AttributeValue().withN(Float.toString(instructions/generations)));
         item.put("world", new AttributeValue().withN(Integer.toString(world)));
         return item;
@@ -135,10 +145,9 @@ public class AmazonDynamoDBConnector {
 
     public Map<String, AttributeValue> newItemInsectWars(Long instructions, int max, int sz1, int sz2) {
         Map<String, AttributeValue> item = new HashMap<String, AttributeValue>();
-        item.put("type", new AttributeValue("InsectWars"));
-        // Float param = 
+        // Float param =
         // item.put("instructionsTimesRatioPerRoundPerTotal", new AttributeValue().withN(Long.toString(instructions)));
-        item.put("max", new AttributeValue().withN(Long.toString(max)));
+        item.put("maxrounds", new AttributeValue().withN(Long.toString(max)));
         item.put("sz1", new AttributeValue().withN(Long.toString(sz1)));
         item.put("sz2", new AttributeValue().withN(Long.toString(sz2)));
         return item;
