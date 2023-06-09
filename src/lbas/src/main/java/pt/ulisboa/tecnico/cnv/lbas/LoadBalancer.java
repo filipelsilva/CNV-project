@@ -284,6 +284,12 @@ public class LoadBalancer {
 
     protected static class PostHandler implements HttpHandler {
 
+        public String whereFrom;
+
+        public GetHandler(String type) {
+            whereFrom = type;
+        }
+
         @Override
         public void handle(HttpExchange t) throws IOException {
             if (t.getRequestHeaders().getFirst("Origin") != null) {
