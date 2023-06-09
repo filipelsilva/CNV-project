@@ -40,10 +40,10 @@ public class AmazonDynamoDBConnector {
 
     public void createTable(String tableName) {
         try {
-            // Create a table with a primary hash key named 'name', which holds a string
+            // Create a table with a primary hash key named 'type', which holds a string
             CreateTableRequest createTableRequest = new CreateTableRequest().withTableName(tableName)
-                .withKeySchema(new KeySchemaElement().withAttributeName("name").withKeyType(KeyType.HASH))
-                .withAttributeDefinitions(new AttributeDefinition().withAttributeName("name").withAttributeType(ScalarAttributeType.S))
+                .withKeySchema(new KeySchemaElement().withAttributeName("type").withKeyType(KeyType.HASH))
+                .withAttributeDefinitions(new AttributeDefinition().withAttributeName("type").withAttributeType(ScalarAttributeType.S))
                 .withProvisionedThroughput(new ProvisionedThroughput().withReadCapacityUnits(1L).withWriteCapacityUnits(1L));
 
             // Create table if it does not exist yet
