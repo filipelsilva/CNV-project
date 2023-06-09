@@ -9,6 +9,8 @@ project. Name it `awskeypair.pem`.
 
 3. `cd src/scripts`
 
+3.0. create a copy of file `config.sh.example` and name it `config.sh`. Fill in the `<CHANGE_ME>` fields with the appropriate values.
+
 3.1. To create the image, `./create-image.sh`
 
 3.2. To launch the whole deployment, `./launch-deployment.sh`

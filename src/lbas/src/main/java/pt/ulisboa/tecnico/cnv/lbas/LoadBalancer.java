@@ -51,14 +51,13 @@ import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 
-
 public class LoadBalancer {
 
     private String AWS_REGION = "us-east-1";
     private AmazonDynamoDB dynamoDB = AmazonDynamoDBClientBuilder.standard()
-        .withCredentials(new EnvironmentVariableCredentialsProvider())
-        .withRegion(AWS_REGION)
-        .build();
+            .withCredentials(new EnvironmentVariableCredentialsProvider())
+            .withRegion(AWS_REGION)
+            .build();
 
     private ConcurrentHashMap<Instance, Double> instanceUsage;
 
@@ -82,15 +81,15 @@ public class LoadBalancer {
     }
 
     public Map<String, String> queryToMap(String query) {
-        if(query == null) {
+        if (query == null) {
             return null;
         }
         Map<String, String> result = new HashMap<>();
-        for(String param : query.split("&")) {
+        for (String param : query.split("&")) {
             String[] entry = param.split("=");
-            if(entry.length > 1) {
+            if (entry.length > 1) {
                 result.put(entry[0], entry[1]);
-            }else{
+            } else {
                 result.put(entry[0], "");
             }
         }
@@ -99,10 +98,10 @@ public class LoadBalancer {
 
     public Instance getInstanceWithLowestUtilization() {
         return instanceUsage.entrySet()
-            .stream()
-            .max(ConcurrentHashMap.Entry.comparingByValue())
-            .map(ConcurrentHashMap.Entry::getKey)
-            .orElse(null);
+                .stream()
+                .max(ConcurrentHashMap.Entry.comparingByValue())
+                .map(ConcurrentHashMap.Entry::getKey)
+                .orElse(null);
     }
 
     public ScanResult getDynamoDB(String tableName, Map<String, Condition> scanFilter) {
@@ -136,7 +135,7 @@ public class LoadBalancer {
 
         // Get data from the db
         HashMap<String, Condition> scanFilter = new HashMap<String, Condition>();
-        
+
         scanFilter.put("type", new Condition()
                 .withComparisonOperator(ComparisonOperator.EQ.toString())
                 .withAttributeValueList(new AttributeValue("FoxesAndRabbits")));
@@ -151,38 +150,40 @@ public class LoadBalancer {
 
     public Integer processImageCompression(Map<String, String> parameters) {
         // function executeCompress(e) {
-        //     var iimage = document.getElementById("inputImageCompress").src;
-        //     var host = document.getElementById("targetAddressCompress").value;
-        //     var port = document.getElementById("targetPortCompress").value;
-        //     var operation = document.getElementById("operation").value;
-        //     var compressionFactor = document.getElementById("compressionFactor").value;
-        //     iimage = 'targetFormat:' + operation + ';compressionFactor:' + compressionFactor + ';' + iimage;
-        //     fetch('http://' + host + ':' + port + '/compressimage', { method: 'POST', body: iimage })
-        //         .then(response => response.blob())
-        //         .then(myBlob => {
-        //             var reader = new FileReader() ;
-        //             reader.readAsBinaryString(myBlob) ;
-        //             reader.onload = function(ee) {
-        //                 var result = ee.target.result
-        //                     var image = new Image();
-        //                 image.src = result;
-        //                 image.onload = function () {
-        //                     document.getElementById("outputImageCompress").src=image.src;
-        //                 };
-        //             };
-        //         });
+        // var iimage = document.getElementById("inputImageCompress").src;
+        // var host = document.getElementById("targetAddressCompress").value;
+        // var port = document.getElementById("targetPortCompress").value;
+        // var operation = document.getElementById("operation").value;
+        // var compressionFactor = document.getElementById("compressionFactor").value;
+        // iimage = 'targetFormat:' + operation + ';compressionFactor:' +
+        // compressionFactor + ';' + iimage;
+        // fetch('http://' + host + ':' + port + '/compressimage', { method: 'POST',
+        // body: iimage })
+        // .then(response => response.blob())
+        // .then(myBlob => {
+        // var reader = new FileReader() ;
+        // reader.readAsBinaryString(myBlob) ;
+        // reader.onload = function(ee) {
+        // var result = ee.target.result
+        // var image = new Image();
+        // image.src = result;
+        // image.onload = function () {
+        // document.getElementById("outputImageCompress").src=image.src;
+        // };
+        // };
+        // });
         // }
 
         // Get data from the db
         HashMap<String, Condition> scanFilter = new HashMap<String, Condition>();
-        
+
         scanFilter.put("type", new Condition()
                 .withComparisonOperator(ComparisonOperator.EQ.toString())
                 .withAttributeValueList(new AttributeValue("ImageCompression")));
 
         // scanFilter.put("format", new Condition()
-        //         .withComparisonOperator(ComparisonOperator.EQ.toString())
-        //         .withAttributeValueList(new AttributeValue(format)));
+        // .withComparisonOperator(ComparisonOperator.EQ.toString())
+        // .withAttributeValueList(new AttributeValue(format)));
 
         ScanResult result = getDynamoDB("info", scanFilter);
         return 0;
@@ -195,14 +196,14 @@ public class LoadBalancer {
 
         // Get data from the db
         HashMap<String, Condition> scanFilter = new HashMap<String, Condition>();
-        
+
         scanFilter.put("type", new Condition()
                 .withComparisonOperator(ComparisonOperator.EQ.toString())
                 .withAttributeValueList(new AttributeValue("InsectWars")));
 
         // scanFilter.put("format", new Condition()
-        //         .withComparisonOperator(ComparisonOperator.EQ.toString())
-        //         .withAttributeValueList(new AttributeValue(format)));
+        // .withComparisonOperator(ComparisonOperator.EQ.toString())
+        // .withAttributeValueList(new AttributeValue(format)));
 
         ScanResult result = getDynamoDB("info", scanFilter);
         return 0;
@@ -212,11 +213,11 @@ public class LoadBalancer {
         Integer instructions = 0;
         switch (type) {
             case "FoxesAndRabbits":
-                 instructions = processFoxesAndRabbits(parameters);
+                instructions = processFoxesAndRabbits(parameters);
             case "ImageCompression":
-                 instructions = processImageCompression(parameters);
+                instructions = processImageCompression(parameters);
             case "InsectWars":
-                 instructions = processInsectWars(parameters);
+                instructions = processInsectWars(parameters);
             default:
                 return null;
         }
@@ -286,7 +287,7 @@ public class LoadBalancer {
 
         public String whereFrom;
 
-        public GetHandler(String type) {
+        public PostHandler(String type) {
             whereFrom = type;
         }
 
@@ -301,12 +302,16 @@ public class LoadBalancer {
                 t.sendResponseHeaders(204, -1);
             } else {
                 InputStream stream = t.getRequestBody();
-                // Result syntax: targetFormat:<targetFormat>;compressionFactor:<factor>;data:image/<currentFormat>;base64,<encoded image>
-                String result = new BufferedReader(new InputStreamReader(stream)).lines().collect(Collectors.joining("\n"));
+                // Result syntax:
+                // targetFormat:<targetFormat>;compressionFactor:<factor>;data:image/<currentFormat>;base64,<encoded
+                // image>
+                String result = new BufferedReader(new InputStreamReader(stream)).lines()
+                        .collect(Collectors.joining("\n"));
                 String[] resultSplits = result.split(",");
                 String targetFormat = resultSplits[0].split(":")[1].split(";")[0];
                 String compressionFactor = resultSplits[0].split(":")[2].split(";")[0];
-                String output = String.format("data:image/%s;base64,%s", targetFormat, handleRequest(resultSplits[1], targetFormat, Float.parseFloat(compressionFactor)));
+                String output = String.format("data:image/%s;base64,%s", targetFormat,
+                        handleRequest(resultSplits[1], targetFormat, Float.parseFloat(compressionFactor)));
                 t.sendResponseHeaders(200, output.length());
                 OutputStream os = t.getResponseBody();
                 os.write(output.getBytes());
@@ -316,15 +321,16 @@ public class LoadBalancer {
 
         private String handleRequest(String inputEncoded, String format, float compressionFactor) {
             byte[] decoded = Base64.getDecoder().decode(inputEncoded);
-            try {
-                ByteArrayInputStream bais = new ByteArrayInputStream(decoded);
-                BufferedImage bi = ImageIO.read(bais);
-                // byte[] resultImage = process(bi, format, compressionFactor);
-                byte[] outputEncoded = Base64.getEncoder().encode(resultImage);
-                return new String(outputEncoded);
-            } catch (IOException e) {
-                return e.toString();
-            }
+            // try {
+            // ByteArrayInputStream bais = new ByteArrayInputStream(decoded);
+            // BufferedImage bi = ImageIO.read(bais);
+            // byte[] resultImage = process(bi, format, compressionFactor);
+            // byte[] outputEncoded = Base64.getEncoder().encode(resultImage);
+            // return new String(outputEncoded);
+            return "";
+            // } catch (IOException e) {
+            // return e.toString();
+            // }
         }
     }
 
