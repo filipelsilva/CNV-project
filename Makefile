@@ -1,9 +1,9 @@
-.PHONY: all workload javassist
+.PHONY: all webserver javassist
 
-all: workload javassist lbas
+all: webserver javassist lbas
 
-workload:
-	(cd src/workload && mvn clean install)
+webserver:
+	(cd src/webserver && mvn clean install)
 
 javassist:
 	(cd src/javassist && mvn clean install)
