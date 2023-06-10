@@ -2,9 +2,17 @@
 
 source config.sh
 
+if [ "$#" -ne 1 ]; then
+	AMI_ID="resolve:ssm:/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+else
+	AMI_ID=$(aws ec2 describe-images --filters "Name=name,Values=$1" --query "Images[0].ImageId" --output text)
+fi
+
+echo "Launching new instance with AMI $AMI_ID ..."
+
 # Run new instance.
 aws ec2 run-instances \
-	--image-id resolve:ssm:/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2 \
+	--image-id "$AMI_ID" \
 	--instance-type t2.micro \
 	--key-name $AWS_KEYPAIR_NAME \
 	--security-group-ids $AWS_SECURITY_GROUP \

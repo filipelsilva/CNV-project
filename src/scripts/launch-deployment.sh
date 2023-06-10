@@ -2,6 +2,8 @@
 
 source config.sh
 
+$DIR/launch-vm.sh CNV-LBAS
+
 # Create load balancer and configure health check.
 aws elb create-load-balancer \
 	--load-balancer-name CNV-LoadBalancer \
