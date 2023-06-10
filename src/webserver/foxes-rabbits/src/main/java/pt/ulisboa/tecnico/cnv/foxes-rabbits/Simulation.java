@@ -1,21 +1,29 @@
 package pt.ulisboa.tecnico.cnv.foxrabbit;
 
 public class Simulation {
-    public static void main(String[] args) throws Exception {
-        int n_generations = Integer.parseInt(args[0]);
-        int world = Integer.parseInt(args[1]);
-        int n_scenario = Integer.parseInt(args[2]);
-        
-        Ecosystem ecosystem = new Ecosystem(world, n_scenario);
+  public static void main(String[] args) throws Exception {
+    int n_generations = Integer.parseInt(args[0]);
+    int world = Integer.parseInt(args[1]);
+    int n_scenario = Integer.parseInt(args[2]);
 
-        //ecosystem.printWorld(0, 0);
+    Ecosystem ecosystem = new Ecosystem(world, n_scenario);
 
-        int generation = ecosystem.runSimulation(n_generations);
+    // ecosystem.printWorld(0, 0);
 
-        int final_rocks = ecosystem.countType(Type.ROCK);
-        int final_rabbits = ecosystem.countType(Type.RABBIT);
-        int final_foxes = ecosystem.countType(Type.FOX);
+    int generation = ecosystem.runSimulation(n_generations);
 
-        System.out.println("generation: " + generation + " | " + final_rocks + " " + final_rabbits + " " + final_foxes);
-    }
+    int final_rocks = ecosystem.countType(Type.ROCK);
+    int final_rabbits = ecosystem.countType(Type.RABBIT);
+    int final_foxes = ecosystem.countType(Type.FOX);
+
+    System.out.println(
+        "generation: "
+            + generation
+            + " | "
+            + final_rocks
+            + " "
+            + final_rabbits
+            + " "
+            + final_foxes);
+  }
 }
