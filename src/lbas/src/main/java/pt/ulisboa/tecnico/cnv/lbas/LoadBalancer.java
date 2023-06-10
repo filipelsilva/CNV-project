@@ -141,43 +141,40 @@ public class LoadBalancer {
                 .withAttributeValueList(new AttributeValue().withN(Integer.toString(world))));
 
         ScanResult result = getDynamoDB("FoxesAndRabbits", scanFilter);
+        System.out.println("Result: " + result);
         return 0;
     }
 
+    // public Integer processImageCompression(String inputEncoded, String format, float compressionFactor) {
     public Integer processImageCompression(Map<String, String> parameters) {
-        // function executeCompress(e) {
-        // var iimage = document.getElementById("inputImageCompress").src;
-        // var host = document.getElementById("targetAddressCompress").value;
-        // var port = document.getElementById("targetPortCompress").value;
-        // var operation = document.getElementById("operation").value;
-        // var compressionFactor = document.getElementById("compressionFactor").value;
-        // iimage = 'targetFormat:' + operation + ';compressionFactor:' +
-        // compressionFactor + ';' + iimage;
-        // fetch('http://' + host + ':' + port + '/compressimage', { method: 'POST',
-        // body: iimage })
-        // .then(response => response.blob())
-        // .then(myBlob => {
-        // var reader = new FileReader() ;
-        // reader.readAsBinaryString(myBlob) ;
-        // reader.onload = function(ee) {
-        // var result = ee.target.result
-        // var image = new Image();
-        // image.src = result;
-        // image.onload = function () {
-        // document.getElementById("outputImageCompress").src=image.src;
-        // };
-        // };
-        // });
-        // }
+        String inputEncoded = parameters.get("image");
+        String format = parameters.get("format");
+        Float compressionFactor = Float.parseFloat(parameters.get("compressionFactor"));
+
+        byte[] decoded = Base64.getDecoder().decode(inputEncoded);
+        BufferedImage bi = null;
+
+        try {
+            ByteArrayInputStream bais = new ByteArrayInputStream(decoded);
+            bi = ImageIO.read(bais);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        float width = bi.getWidth();
+        float height = bi.getHeight();
 
         // Get data from the db
         HashMap<String, Condition> scanFilter = new HashMap<String, Condition>();
 
-        // scanFilter.put("format", new Condition()
-        // .withComparisonOperator(ComparisonOperator.EQ.toString())
-        // .withAttributeValueList(new AttributeValue(format)));
+        scanFilter.put("format", new Condition()
+                .withComparisonOperator(ComparisonOperator.EQ.toString())
+                .withAttributeValueList(new AttributeValue(format)));
 
         ScanResult result = getDynamoDB("ImageCompression", scanFilter);
+        System.out.println("Result: " + result);
+
         return 0;
     }
 
@@ -272,7 +269,7 @@ public class LoadBalancer {
         }
     }
 
-    protected static class PostHandler implements HttpHandler {
+    protected class PostHandler implements HttpHandler {
 
         public String whereFrom;
 
@@ -297,8 +294,16 @@ public class LoadBalancer {
                 String result = new BufferedReader(new InputStreamReader(stream)).lines()
                         .collect(Collectors.joining("\n"));
                 String[] resultSplits = result.split(",");
+
                 String targetFormat = resultSplits[0].split(":")[1].split(";")[0];
                 String compressionFactor = resultSplits[0].split(":")[2].split(";")[0];
+
+                Map<String, String> params = new HashMap<>();
+                params.put("targetFormat", targetFormat);
+                params.put("compressionFactor", compressionFactor);
+                params.put("image", resultSplits[1]);
+                getInstanceURL(whereFrom, params);
+
                 String output = String.format("data:image/%s;base64,%s", targetFormat,
                         handleRequest(resultSplits[1], targetFormat, Float.parseFloat(compressionFactor)));
                 t.sendResponseHeaders(200, output.length());
