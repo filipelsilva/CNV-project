@@ -65,8 +65,10 @@ public class ICount extends CodeDumper {
         System.out.println(String.format("[%s Image Compression] ThreadID is %s", ICount.class.getSimpleName(), threadID));
         System.out.println(String.format("[%s Image Compression] Number of instructions ran is %s", ICount.class.getSimpleName(), getThreadInfo(threadID)));
 
-        // TODO update map with info
-        // ImageCompressionCache.put(String.format("%sx%s", bi.getWidth(), bi.getHeight()), getThreadInfo(threadID));
+        Float instructionsPerImageSizePerCompressionFactor = (float)getThreadInfo(threadID) / ((float)(bi.getWidth() * bi.getHeight()) * compressionQuality);
+
+        // update local cache map with info
+        ImageCompressionCache.put(targetFormat, instructionsPerImageSizePerCompressionFactor);
 
         incCounter();
         if (getCounter() == 0) {
@@ -74,11 +76,8 @@ public class ICount extends CodeDumper {
             dynamoDBConnector.putItem(
                     "ImageCompression",
                     dynamoDBConnector.newItemImageCompression(
-                        getThreadInfo(threadID),
-                        bi.getWidth(),
-                        bi.getHeight(),
-                        targetFormat,
-                        compressionQuality
+                        instructionsPerImageSizePerCompressionFactor,
+                        targetFormat
                         )
                     );
         }
@@ -93,7 +92,10 @@ public class ICount extends CodeDumper {
         System.out.println(String.format("[%s Foxes And Rabbits] ThreadID is %s", ICount.class.getSimpleName(), threadID));
         System.out.println(String.format("[%s Foxes And Rabbits] Number of instructions ran is %s", ICount.class.getSimpleName(), getThreadInfo(threadID)));
 
+        Float instructionsPerGeneration = (float)getThreadInfo(threadID) / (float)n_generations;
+
         // TODO update map with info
+        FoxesAndRabbitsCache.put(worldFoxesRabbits, instructionsPerGeneration);
 
         incCounter();
         if (getCounter() == 0) {
@@ -101,9 +103,8 @@ public class ICount extends CodeDumper {
             dynamoDBConnector.putItem(
                     "FoxesAndRabbits",
                     dynamoDBConnector.newItemFoxesAndRabbits(
-                        getThreadInfo(threadID),
-                        worldFoxesRabbits,
-                        n_generations
+                        (float)getThreadInfo(threadID) / (float)n_generations,
+                        worldFoxesRabbits
                         )
                     );
         }
@@ -124,15 +125,16 @@ public class ICount extends CodeDumper {
         incCounter();
         if (getCounter() == 0) {
             // Update data on dynamoDB
+            int ratio = sz1 / sz2;
+            if (sz1 > sz2) {
+                ratio = sz2 / sz1;
+            }
             dynamoDBConnector.putItem(
                     "InsectWars",
                     dynamoDBConnector.newItemInsectWars(
-                        getThreadInfo(threadID),
-                        max,
-                        sz1,
-                        sz2
-                        )
-                    );
+                        (float)getThreadInfo(threadID) / (float)(max * (sz1 + sz2) * ratio)
+                    )
+                );
         }
 
         // Reset the number of instructions per thread for this thread

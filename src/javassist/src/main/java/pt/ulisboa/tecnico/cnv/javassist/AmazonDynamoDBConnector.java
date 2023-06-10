@@ -129,27 +129,23 @@ public class AmazonDynamoDBConnector {
         }
     }
 
-    public Map<String, AttributeValue> newItemImageCompression(Long instructions, int width, int height, String format, float compression) {
+    public Map<String, AttributeValue> newItemImageCompression(Float instructionsPerImageSizePerCompressionFactor, String format) {
         Map<String, AttributeValue> item = new HashMap<String, AttributeValue>();
-        item.put("instructionsPerImageSizePerCompressionFactor", new AttributeValue().withN(Float.toString(instructions/(width*height*compression))));
+        item.put("instructionsPerImageSizePerCompressionFactor", new AttributeValue().withN(Float.toString(instructionsPerImageSizePerCompressionFactor)));
         item.put("format", new AttributeValue(format));
         return item;
     }
 
-    public Map<String, AttributeValue> newItemFoxesAndRabbits(Long instructions, int world, int generations) {
+    public Map<String, AttributeValue> newItemFoxesAndRabbits(Float instructionsPerGeneration, int world) {
         Map<String, AttributeValue> item = new HashMap<String, AttributeValue>();
-        item.put("instructionsPerGeneration", new AttributeValue().withN(Float.toString(instructions/generations)));
+        item.put("instructionsPerGeneration", new AttributeValue().withN(Float.toString(instructionsPerGeneration)));
         item.put("world", new AttributeValue().withN(Integer.toString(world)));
         return item;
     }
 
-    public Map<String, AttributeValue> newItemInsectWars(Long instructions, int max, int sz1, int sz2) {
+    public Map<String, AttributeValue> newItemInsectWars(Float instructionsPerRoundPerSizeTimesRatio) {
         Map<String, AttributeValue> item = new HashMap<String, AttributeValue>();
-        // Float param =
-        // item.put("instructionsTimesRatioPerRoundPerTotal", new AttributeValue().withN(Long.toString(instructions)));
-        item.put("maxrounds", new AttributeValue().withN(Long.toString(max)));
-        item.put("sz1", new AttributeValue().withN(Long.toString(sz1)));
-        item.put("sz2", new AttributeValue().withN(Long.toString(sz2)));
+        item.put("instructionsPerRoundPerSizeTimesRatio", new AttributeValue().withN(Float.toString(instructionsPerRoundPerSizeTimesRatio)));
         return item;
     }
 }

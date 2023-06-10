@@ -233,6 +233,7 @@ public class LoadBalancer {
 
             // Parsing request
             URI requestedUri = t.getRequestURI();
+            System.out.println("Request URI: " + requestedUri);
             String query = requestedUri.getRawQuery();
             System.out.println("Query: " + query);
             Map<String, String> parameters = queryToMap(query);
