@@ -9,6 +9,9 @@ import com.amazonaws.services.cloudwatch.model.Dimension;
 import com.amazonaws.services.cloudwatch.model.GetMetricStatisticsRequest;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
+import com.amazonaws.services.ec2.model.DescribeImagesRequest;
+import com.amazonaws.services.ec2.model.DescribeImagesResult;
+import com.amazonaws.services.ec2.model.Filter;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
@@ -26,7 +29,7 @@ public class AutoScaler {
 
   private static long OBS_TIME = 1000 * 60 * 20;
   private static String AWS_REGION = "us-east-1";
-  private static String AMI_ID = "ami-0c3380fb1b339e040";
+  private static String AMI_ID;
   private static String KEY_NAME = "awskeypair";
   private static String SEC_GROUP_ID = "sg-0bd30fee47aed5db8";
   private static Integer MAX_CPU_USAGE = 80;
@@ -56,6 +59,11 @@ public class AutoScaler {
     this.instanceUsage = instances;
     this.instanceCount = instanceCount;
     this.instanceAvailableCount = instanceAvailableCount;
+
+    DescribeImagesRequest request = new DescribeImagesRequest();
+    request.withFilters(new Filter("name").withValues("CNV-Webserver"));
+    DescribeImagesResult result = ec2.describeImages(request);
+    AMI_ID = result.getImages().get(0).getImageId();
   }
 
   private Set<Instance> getInstances(AmazonEC2 ec2) throws Exception {
