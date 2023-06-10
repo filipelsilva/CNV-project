@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
@@ -36,14 +37,18 @@ public class AutoScaler {
     private static Integer MIN_CPU_USAGE = 20;
 
     private ConcurrentHashMap<Instance, Double> instanceUsage;
+    private AtomicInteger instanceCount;
+    private AtomicInteger instanceAvailableCount;
 
     private AmazonEC2 ec2;
     private AmazonCloudWatch cloudWatch;
 
-    public AutoScaler(ConcurrentHashMap<Instance, Double> instances) {
+    public AutoScaler(ConcurrentHashMap<Instance, Double> instances, AtomicInteger instanceCount, AtomicInteger instanceAvailableCount) {
         ec2 = AmazonEC2ClientBuilder.standard().withRegion(AWS_REGION).withCredentials(new EnvironmentVariableCredentialsProvider()).build();
         cloudWatch = AmazonCloudWatchClientBuilder.standard().withRegion(AWS_REGION).withCredentials(new EnvironmentVariableCredentialsProvider()).build();
         this.instanceUsage = instances;
+        this.instanceCount = instanceCount;
+        this.instanceAvailableCount = instanceAvailableCount;
     }
 
     private Set<Instance> getInstances(AmazonEC2 ec2) throws Exception {
@@ -100,8 +105,8 @@ public class AutoScaler {
     public void analyseInstances() {
         try {
             Double avgCPU = 0d;
-            Integer instanceAvailableCount = 0;
-            Integer instanceCount = 0;
+            int instanceCountLocal = 0;
+            int instanceAvailableCountLocal = 0;
 
             System.out.println("===========================================");
             System.out.println("Checking data...");
@@ -134,9 +139,9 @@ public class AutoScaler {
                     List<Datapoint> datapoints = cloudWatch.getMetricStatistics(request).getDatapoints();
 
                     // Because an instance may be running, but still be initializing
-                    instanceCount++;
+                    instanceCountLocal = instanceCount.incrementAndGet();
                     if (datapoints.size() != 0) {
-                        instanceAvailableCount++;
+                        instanceAvailableCountLocal = instanceAvailableCount.incrementAndGet();
                         avgCPU += datapoints.get(datapoints.size() - 1).getAverage();
                         System.out.println(" LAST CPU utilization for instance " + iid + " = " + datapoints.get(datapoints.size() - 1).getAverage());
                     }
@@ -151,19 +156,19 @@ public class AutoScaler {
 
             System.out.println(String.format("Number of instances: %d", instanceCount));
             System.out.println(String.format("Number of ready instances: %d", instanceAvailableCount));
-            if (instanceCount == 0) {
+            if (instanceCountLocal == 0) {
                 System.out.println("Starting a new instance.");
                 // startNewInstance();
                 return;
             }
 
-            avgCPU /= instanceAvailableCount;
+            avgCPU /= instanceAvailableCountLocal;
             System.out.println("Average CPU utilization = " + avgCPU);
 
             if (avgCPU < MIN_CPU_USAGE) {
                 System.out.println(String.format("Average CPU utilization is under %d%%", MIN_CPU_USAGE));
                 System.out.println("Stopping an instance.");
-                if (instanceCount == 1) {
+                if (instanceCountLocal == 1) {
                     System.out.println("Only one instance running. Cannot stop.");
                     return;
                 }

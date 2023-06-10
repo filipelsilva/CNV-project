@@ -4,6 +4,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.services.ec2.model.Instance;
 
@@ -13,8 +14,10 @@ public class LBAS {
 
     public static void main(String[] args) {
         ConcurrentHashMap<Instance, Double> instances = new ConcurrentHashMap<>();
-        // autoScaler = new AutoScaler(instances);
-        loadBalancer = new LoadBalancer(instances);
+        AtomicInteger instanceCount = new AtomicInteger(0);
+        AtomicInteger instanceAvailableCount = new AtomicInteger(0);
+        // autoScaler = new AutoScaler(instances, instanceCount, instanceAvailableCount);
+        loadBalancer = new LoadBalancer(instances, instanceCount, instanceAvailableCount);
 
         // ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
         // Runnable autoscalerTask = () -> {

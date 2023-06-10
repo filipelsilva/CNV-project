@@ -38,49 +38,6 @@ public class AmazonDynamoDBConnector {
         .withRegion(AWS_REGION)
         .build();
 
-    public void waitForTable(String tableName) {
-        try {
-            // wait for the table to move into ACTIVE state
-            TableUtils.waitUntilActive(dynamoDB, tableName);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void createTable(String tableName, String primaryKey) {
-        try {
-            ScalarAttributeType primary;
-            if (primaryKey.equals("format")) {
-                primary = ScalarAttributeType.S;
-            } else {
-                primary = ScalarAttributeType.N;
-            }
-
-            // Create a table with a primary hash key named 'type', which holds a string
-            CreateTableRequest createTableRequest = new CreateTableRequest().withTableName(tableName)
-                .withKeySchema(new KeySchemaElement().withAttributeName(primaryKey).withKeyType(KeyType.HASH))
-                .withAttributeDefinitions(new AttributeDefinition().withAttributeName(primaryKey).withAttributeType(primary))
-                .withProvisionedThroughput(new ProvisionedThroughput().withReadCapacityUnits(1L).withWriteCapacityUnits(1L));
-
-            // Create table if it does not exist yet
-            TableUtils.createTableIfNotExists(dynamoDB, createTableRequest);
-
-        } catch (AmazonServiceException ase) {
-            System.out.println("Caught an AmazonServiceException, which means your request made it "
-                    + "to AWS, but was rejected with an error response for some reason.");
-            System.out.println("Error Message:    " + ase.getMessage());
-            System.out.println("HTTP Status Code: " + ase.getStatusCode());
-            System.out.println("AWS Error Code:   " + ase.getErrorCode());
-            System.out.println("Error Type:       " + ase.getErrorType());
-            System.out.println("Request ID:       " + ase.getRequestId());
-        } catch (AmazonClientException ace) {
-            System.out.println("Caught an AmazonClientException, which means the client encountered "
-                    + "a serious internal problem while trying to communicate with AWS, "
-                    + "such as not being able to access the network.");
-            System.out.println("Error Message: " + ace.getMessage());
-        }
-    }
-
     public void putItem(String tableName, Map<String, AttributeValue> item) {
         try {
             dynamoDB.putItem(new PutItemRequest(tableName, item));

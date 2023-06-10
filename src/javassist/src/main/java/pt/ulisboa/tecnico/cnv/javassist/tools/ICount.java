@@ -25,14 +25,6 @@ public class ICount extends CodeDumper {
 
     public ICount(List<String> packageNameList, String writeDestination) {
         super(packageNameList, writeDestination);
-        dynamoDBConnector.createTable("FoxesAndRabbits", "world");
-        dynamoDBConnector.createTable("ImageCompression", "format");
-        dynamoDBConnector.createTable("InsectWars", "instructionsPerRoundPerSizeTimesRatio");
-        System.out.println("[ICount] Creating tables...");
-        dynamoDBConnector.waitForTable("FoxesAndRabbits");
-        dynamoDBConnector.waitForTable("ImageCompression");
-        dynamoDBConnector.waitForTable("InsectWars");
-        System.out.println("[ICount] Tables ready to go!");
     }
 
     public static int getCounter() {
@@ -72,7 +64,6 @@ public class ICount extends CodeDumper {
                         );
             }
 
-            System.out.println(String.format("[ICount] Updating DynamoDB InsectWarsCache...%s", InsectWarsCache));
             System.out.println("[ICount] Updating DynamoDB InsectWarsCache...");
             if (InsectWarsCache != null) {
                 dynamoDBConnector.putItem(
