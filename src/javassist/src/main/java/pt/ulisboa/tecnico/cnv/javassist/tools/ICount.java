@@ -12,6 +12,13 @@ import pt.ulisboa.tecnico.cnv.javassist.AmazonDynamoDBConnector;
 
 public class ICount extends CodeDumper {
 
+    private static int counter = 0;
+    private static int BATCH_SIZE = 5;
+
+    private static Map<Integer, Float> FoxesAndRabbitsCache = new HashMap<>();
+    private static Map<String, Float> ImageCompressionCache = new HashMap<>();
+    private static Float InsectWarsCache = 0f;
+
     private static int worldFoxesRabbits = 0;
     private static Map<Integer, Long> ninstsPerThread = new HashMap<>();
     private static AmazonDynamoDBConnector dynamoDBConnector = new AmazonDynamoDBConnector();
@@ -24,6 +31,15 @@ public class ICount extends CodeDumper {
         dynamoDBConnector.waitForTable("FoxesAndRabbits");
         dynamoDBConnector.waitForTable("ImageCompression");
         dynamoDBConnector.waitForTable("InsectWars");
+    }
+
+    public static int getCounter() {
+        return counter;
+    }
+
+    public static void incCounter() {
+        counter += 1;
+        counter %= BATCH_SIZE;
     }
 
     public static Long getThreadInfo(int threadID) {
@@ -49,17 +65,23 @@ public class ICount extends CodeDumper {
         System.out.println(String.format("[%s Image Compression] ThreadID is %s", ICount.class.getSimpleName(), threadID));
         System.out.println(String.format("[%s Image Compression] Number of instructions ran is %s", ICount.class.getSimpleName(), getThreadInfo(threadID)));
 
-        // Update data on dynamoDB
-        dynamoDBConnector.putItem(
-                "ImageCompression",
-                dynamoDBConnector.newItemImageCompression(
-                    getThreadInfo(threadID),
-                    bi.getWidth(),
-                    bi.getHeight(),
-                    targetFormat,
-                    compressionQuality
-                    )
-                );
+        // TODO update map with info
+        // ImageCompressionCache.put(String.format("%sx%s", bi.getWidth(), bi.getHeight()), getThreadInfo(threadID));
+
+        incCounter();
+        if (getCounter() == 0) {
+            // Update data on dynamoDB
+            dynamoDBConnector.putItem(
+                    "ImageCompression",
+                    dynamoDBConnector.newItemImageCompression(
+                        getThreadInfo(threadID),
+                        bi.getWidth(),
+                        bi.getHeight(),
+                        targetFormat,
+                        compressionQuality
+                        )
+                    );
+        }
 
         // Reset the number of instructions per thread for this thread
         clearThreadInfo(threadID);
@@ -71,15 +93,20 @@ public class ICount extends CodeDumper {
         System.out.println(String.format("[%s Foxes And Rabbits] ThreadID is %s", ICount.class.getSimpleName(), threadID));
         System.out.println(String.format("[%s Foxes And Rabbits] Number of instructions ran is %s", ICount.class.getSimpleName(), getThreadInfo(threadID)));
 
-        // Update data on dynamoDB
-        dynamoDBConnector.putItem(
-                "FoxesAndRabbits",
-                dynamoDBConnector.newItemFoxesAndRabbits(
-                    getThreadInfo(threadID),
-                    worldFoxesRabbits,
-                    n_generations
-                    )
-                );
+        // TODO update map with info
+
+        incCounter();
+        if (getCounter() == 0) {
+            // Update data on dynamoDB
+            dynamoDBConnector.putItem(
+                    "FoxesAndRabbits",
+                    dynamoDBConnector.newItemFoxesAndRabbits(
+                        getThreadInfo(threadID),
+                        worldFoxesRabbits,
+                        n_generations
+                        )
+                    );
+        }
 
         // Reset the number of instructions per thread for this thread
         clearThreadInfo(threadID);
@@ -92,16 +119,21 @@ public class ICount extends CodeDumper {
         System.out.println(String.format("[%s Insect Wars] ThreadID is %s", ICount.class.getSimpleName(), threadID));
         System.out.println(String.format("[%s Insect Wars] Number of instructions ran is %s", ICount.class.getSimpleName(), getThreadInfo(threadID)));
 
-        // Update data on dynamoDB
-        dynamoDBConnector.putItem(
-                "InsectWars",
-                dynamoDBConnector.newItemInsectWars(
-                    getThreadInfo(threadID),
-                    max,
-                    sz1,
-                    sz2
-                    )
-                );
+        // TODO update map with info
+
+        incCounter();
+        if (getCounter() == 0) {
+            // Update data on dynamoDB
+            dynamoDBConnector.putItem(
+                    "InsectWars",
+                    dynamoDBConnector.newItemInsectWars(
+                        getThreadInfo(threadID),
+                        max,
+                        sz1,
+                        sz2
+                        )
+                    );
+        }
 
         // Reset the number of instructions per thread for this thread
         clearThreadInfo(threadID);
