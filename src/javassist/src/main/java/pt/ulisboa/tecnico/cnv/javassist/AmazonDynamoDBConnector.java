@@ -81,37 +81,9 @@ public class AmazonDynamoDBConnector {
         }
     }
 
-    public void describeTable(String tableName) {
-        DescribeTableRequest describeTableRequest = new DescribeTableRequest().withTableName(tableName);
-        TableDescription tableDescription = dynamoDB.describeTable(describeTableRequest).getTable();
-        System.out.println("Table Description: " + tableDescription);
-    }
-
     public void putItem(String tableName, Map<String, AttributeValue> item) {
         try {
             dynamoDB.putItem(new PutItemRequest(tableName, item));
-
-        } catch (AmazonServiceException ase) {
-            System.out.println("Caught an AmazonServiceException, which means your request made it "
-                    + "to AWS, but was rejected with an error response for some reason.");
-            System.out.println("Error Message:    " + ase.getMessage());
-            System.out.println("HTTP Status Code: " + ase.getStatusCode());
-            System.out.println("AWS Error Code:   " + ase.getErrorCode());
-            System.out.println("Error Type:       " + ase.getErrorType());
-            System.out.println("Request ID:       " + ase.getRequestId());
-        } catch (AmazonClientException ace) {
-            System.out.println("Caught an AmazonClientException, which means the client encountered "
-                    + "a serious internal problem while trying to communicate with AWS, "
-                    + "such as not being able to access the network.");
-            System.out.println("Error Message: " + ace.getMessage());
-        }
-    }
-
-    public void getItem(String tableName, Map<String, Condition> scanFilter) {
-        try {
-            ScanRequest scanRequest = new ScanRequest(tableName).withScanFilter(scanFilter);
-            ScanResult scanResult = dynamoDB.scan(scanRequest);
-            System.out.println("Result: " + scanResult);
 
         } catch (AmazonServiceException ase) {
             System.out.println("Caught an AmazonServiceException, which means your request made it "

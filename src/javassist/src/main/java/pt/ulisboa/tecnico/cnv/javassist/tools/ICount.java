@@ -17,7 +17,7 @@ public class ICount extends CodeDumper {
 
     private static Map<Integer, Float> FoxesAndRabbitsCache = new HashMap<>();
     private static Map<String, Float> ImageCompressionCache = new HashMap<>();
-    private static Float InsectWarsCache = 0f;
+    private static Float InsectWarsCache = null;
 
     private static int worldFoxesRabbits = 0;
     private static Map<Integer, Long> ninstsPerThread = new HashMap<>();
@@ -27,10 +27,12 @@ public class ICount extends CodeDumper {
         super(packageNameList, writeDestination);
         dynamoDBConnector.createTable("FoxesAndRabbits", "world");
         dynamoDBConnector.createTable("ImageCompression", "format");
-        dynamoDBConnector.createTable("InsectWars", "maxrounds");
+        dynamoDBConnector.createTable("InsectWars", "instructionsPerRoundPerSizeTimesRatio");
+        System.out.println("[ICount] Creating tables...");
         dynamoDBConnector.waitForTable("FoxesAndRabbits");
         dynamoDBConnector.waitForTable("ImageCompression");
         dynamoDBConnector.waitForTable("InsectWars");
+        System.out.println("[ICount] Tables ready to go!");
     }
 
     public static int getCounter() {
@@ -39,7 +41,48 @@ public class ICount extends CodeDumper {
 
     public static void incCounter() {
         counter += 1;
-        counter %= BATCH_SIZE;
+        System.out.println(String.format("[ICount] Incrementing counter: (%s/%s)...", counter, BATCH_SIZE));
+
+        if (getCounter() == BATCH_SIZE) {
+            // Reset counter
+            counter = 0;
+
+            // Update data on dynamoDB
+            System.out.println("[ICount] Updating DynamoDB...");
+
+            System.out.println("[ICount] Updating DynamoDB FoxesAndRabbitsCache...");
+            for (Map.Entry<Integer, Float> entry : FoxesAndRabbitsCache.entrySet()) {
+                dynamoDBConnector.putItem(
+                        "FoxesAndRabbits",
+                        dynamoDBConnector.newItemFoxesAndRabbits(
+                            entry.getValue(),
+                            entry.getKey()
+                            )
+                        );
+            }
+
+            System.out.println("[ICount] Updating DynamoDB ImageCompressionCache...");
+            for (Map.Entry<String, Float> entry : ImageCompressionCache.entrySet()) {
+                dynamoDBConnector.putItem(
+                        "ImageCompression",
+                        dynamoDBConnector.newItemImageCompression(
+                            entry.getValue(),
+                            entry.getKey()
+                            )
+                        );
+            }
+
+            System.out.println(String.format("[ICount] Updating DynamoDB InsectWarsCache...%s", InsectWarsCache));
+            System.out.println("[ICount] Updating DynamoDB InsectWarsCache...");
+            if (InsectWarsCache != null) {
+                dynamoDBConnector.putItem(
+                        "InsectWars",
+                        dynamoDBConnector.newItemInsectWars(
+                            InsectWarsCache
+                            )
+                        );
+            }
+        }
     }
 
     public static Long getThreadInfo(int threadID) {
@@ -67,20 +110,15 @@ public class ICount extends CodeDumper {
 
         Float instructionsPerImageSizePerCompressionFactor = (float)getThreadInfo(threadID) / ((float)(bi.getWidth() * bi.getHeight()) * compressionQuality);
 
-        // update local cache map with info
-        ImageCompressionCache.put(targetFormat, instructionsPerImageSizePerCompressionFactor);
-
-        incCounter();
-        if (getCounter() == 0) {
-            // Update data on dynamoDB
-            dynamoDBConnector.putItem(
-                    "ImageCompression",
-                    dynamoDBConnector.newItemImageCompression(
-                        instructionsPerImageSizePerCompressionFactor,
-                        targetFormat
-                        )
-                    );
+        // Update local cache with info
+        if (ImageCompressionCache.containsKey(targetFormat)) {
+            ImageCompressionCache.put(targetFormat, (ImageCompressionCache.get(targetFormat) + instructionsPerImageSizePerCompressionFactor) / 2);
+        } else {
+            ImageCompressionCache.put(targetFormat, instructionsPerImageSizePerCompressionFactor);
         }
+
+        // Every BATCH_SIZE requests, update the data on dynamoDB
+        incCounter();
 
         // Reset the number of instructions per thread for this thread
         clearThreadInfo(threadID);
@@ -94,20 +132,15 @@ public class ICount extends CodeDumper {
 
         Float instructionsPerGeneration = (float)getThreadInfo(threadID) / (float)n_generations;
 
-        // TODO update map with info
-        FoxesAndRabbitsCache.put(worldFoxesRabbits, instructionsPerGeneration);
-
-        incCounter();
-        if (getCounter() == 0) {
-            // Update data on dynamoDB
-            dynamoDBConnector.putItem(
-                    "FoxesAndRabbits",
-                    dynamoDBConnector.newItemFoxesAndRabbits(
-                        (float)getThreadInfo(threadID) / (float)n_generations,
-                        worldFoxesRabbits
-                        )
-                    );
+        // Update local cache map with info
+        if (FoxesAndRabbitsCache.containsKey(worldFoxesRabbits)) {
+            FoxesAndRabbitsCache.put(worldFoxesRabbits, (FoxesAndRabbitsCache.get(worldFoxesRabbits) + instructionsPerGeneration) / 2);
+        } else {
+            FoxesAndRabbitsCache.put(worldFoxesRabbits, instructionsPerGeneration);
         }
+
+        // Every BATCH_SIZE requests, update the data on dynamoDB
+        incCounter();
 
         // Reset the number of instructions per thread for this thread
         clearThreadInfo(threadID);
@@ -120,22 +153,28 @@ public class ICount extends CodeDumper {
         System.out.println(String.format("[%s Insect Wars] ThreadID is %s", ICount.class.getSimpleName(), threadID));
         System.out.println(String.format("[%s Insect Wars] Number of instructions ran is %s", ICount.class.getSimpleName(), getThreadInfo(threadID)));
 
-        // TODO update map with info
-
-        incCounter();
-        if (getCounter() == 0) {
-            // Update data on dynamoDB
-            int ratio = sz1 / sz2;
-            if (sz1 > sz2) {
-                ratio = sz2 / sz1;
-            }
-            dynamoDBConnector.putItem(
-                    "InsectWars",
-                    dynamoDBConnector.newItemInsectWars(
-                        (float)getThreadInfo(threadID) / (float)(max * (sz1 + sz2) * ratio)
-                    )
-                );
+        float ratio = (float)sz1 / (float)sz2;
+        if (sz1 > sz2) {
+            ratio = sz2 / sz1;
         }
+        Float instructionsPerRoundPerSizeTimesRatio = (float)getThreadInfo(threadID) / (float)(max * (sz1 + sz2) * ratio);
+        System.out.println(String.format("[%s Insect Wars] Ratio is %s", ICount.class.getSimpleName(), ratio));
+        System.out.println(String.format("[%s Insect Wars] Number of instructions ran is %s", ICount.class.getSimpleName(), getThreadInfo(threadID)));
+        System.out.println(String.format("[%s Insect Wars] Max simulation rounds is %s", ICount.class.getSimpleName(), max));
+        System.out.println(String.format("[%s Insect Wars] Army 1 size is %s", ICount.class.getSimpleName(), sz1));
+        System.out.println(String.format("[%s Insect Wars] Army 2 size is %s", ICount.class.getSimpleName(), sz2));
+        System.out.println(String.format("[%s Insect Wars] Instructions per round per size times ratio is %s", ICount.class.getSimpleName(), instructionsPerRoundPerSizeTimesRatio));
+
+        // Update local cache map with info
+        if (InsectWarsCache == null) {
+            InsectWarsCache = instructionsPerRoundPerSizeTimesRatio;
+        } else {
+            InsectWarsCache += instructionsPerRoundPerSizeTimesRatio;
+            InsectWarsCache /= 2;
+        }
+
+        // Every BATCH_SIZE requests, update the data on dynamoDB
+        incCounter();
 
         // Reset the number of instructions per thread for this thread
         clearThreadInfo(threadID);
@@ -164,6 +203,6 @@ public class ICount extends CodeDumper {
     protected void transform(BasicBlock block) throws CannotCompileException {
         super.transform(block);
         block.behavior.insertAt(block.line, String.format("%s.setThreadInfo(%s, %s, %s);", ICount.class.getName(),
-                block.getPosition(), block.getLength(), Thread.currentThread().getId()));
+                    block.getPosition(), block.getLength(), Thread.currentThread().getId()));
     }
 }
