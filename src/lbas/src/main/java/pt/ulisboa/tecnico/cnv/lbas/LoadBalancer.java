@@ -32,8 +32,12 @@ import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -52,6 +56,8 @@ public class LoadBalancer {
   private ConcurrentHashMap<Instance, Double> instanceUsage;
   private AtomicInteger instanceCount;
   private AtomicInteger instanceAvailableCount;
+  private int counter = -1;
+  private int lastSize = 0;
 
   public LoadBalancer(
       ConcurrentHashMap<Instance, Double> instances,
@@ -156,13 +162,6 @@ public class LoadBalancer {
       }
     }
     return result;
-  }
-
-  public Instance getInstanceWithLowestUtilization() {
-    return instanceUsage.entrySet().stream()
-        .max(ConcurrentHashMap.Entry.comparingByValue())
-        .map(ConcurrentHashMap.Entry::getKey)
-        .orElse(null);
   }
 
   public ScanResult getDynamoDB(String tableName, Map<String, Condition> scanFilter) {
@@ -302,7 +301,26 @@ public class LoadBalancer {
   private String chooseInstance(Integer instructions) {
     int instanceCountLocal = instanceCount.get();
     int instanceAvailableCountLocal = instanceAvailableCount.get();
-    return null;
+
+    if (instanceAvailableCountLocal < instanceCountLocal) {
+      // TODO run a lambda
+    }
+
+    List<Instance> instancesSorted = new ArrayList<>(instanceUsage.keySet());
+    Collections.sort(instancesSorted, Comparator.comparingDouble(instanceUsage::get));
+
+    // Do a round robin on the instances, sorted by cpu usage so that the first ones
+    // are the ones with the lowest usage
+    int size = instancesSorted.size(); 
+    if (lastSize != size) {
+      counter = 0;
+      lastSize = size;
+    } else {
+      counter++;
+      counter %= size;
+    }
+
+    return instancesSorted.get(counter).getPublicIpAddress();
   }
 
   protected class GetHandler implements HttpHandler {

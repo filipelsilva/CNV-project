@@ -159,7 +159,13 @@ public class AutoScaler {
           instanceCountLocal = instanceCount.incrementAndGet();
           if (datapoints.size() != 0) {
             instanceAvailableCountLocal = instanceAvailableCount.incrementAndGet();
-            avgCPU += datapoints.get(datapoints.size() - 1).getAverage();
+
+            Double cpuUtil = datapoints.get(datapoints.size() - 1).getAverage();
+            avgCPU += cpuUtil;
+
+            // Update instance usage
+            instanceUsage.put(instance, cpuUtil);
+
             System.out.println(
                 " LAST CPU utilization for instance "
                     + iid
