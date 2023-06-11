@@ -77,7 +77,7 @@ public class CompressImageHandlerImpl extends BaseCompressingHandler implements 
         return "Deflate";
       case "tiff": // supported types:
       case "TIFF": // [CCITT RLE, CCITT T.4, CCITT T.6, LZW, JPEG, ZLib, PackBits, Deflate, EXIF
-                   // JPEG]
+        // JPEG]
         return "ZLib";
       default:
         return null;

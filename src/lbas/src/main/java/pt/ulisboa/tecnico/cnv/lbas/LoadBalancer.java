@@ -208,7 +208,13 @@ public class LoadBalancer {
     ScanResult result = getDynamoDB("FoxesAndRabbits", scanFilter);
     System.out.println("Result: " + result);
 
-    return 0;
+    Float instructionsPerGeneration =
+        Float.parseFloat(result.getItems().get(0).get("instructionsPerGeneration").getN());
+
+    Integer instructions = Math.round(instructionsPerGeneration * n_generations);
+    System.out.println("Instructions (estimate): " + instructions);
+
+    return instructions;
   }
 
   public Integer getInstructionsImageCompression(Map<String, String> parameters) {
@@ -242,7 +248,16 @@ public class LoadBalancer {
     ScanResult result = getDynamoDB("ImageCompression", scanFilter);
     System.out.println("Result: " + result);
 
-    return 0;
+    Float instructionsPerImageSizePerCompressionFactor =
+        Float.parseFloat(
+            result.getItems().get(0).get("instructionsPerImageSizePerCompressionFactor").getN());
+
+    Integer instructions =
+        Math.round(
+            instructionsPerImageSizePerCompressionFactor * width * height * compressionFactor);
+    System.out.println("Instructions (estimate): " + instructions);
+
+    return instructions;
   }
 
   public Integer getInstructionsInsectWars(Map<String, String> parameters) {
@@ -254,8 +269,16 @@ public class LoadBalancer {
     HashMap<String, Condition> scanFilter = new HashMap<String, Condition>();
 
     ScanResult result = getDynamoDB("InsectWars", scanFilter);
-    result.getItems();
-    return 0;
+    System.out.println("Result: " + result);
+
+    Float instructionsPerRoundPerSizeTimesRatio =
+        Float.parseFloat(
+            result.getItems().get(0).get("instructionsPerRoundPerSizeTimesRatio").getN());
+
+    Integer instructions = Math.round(instructionsPerRoundPerSizeTimesRatio * max * army1 * army2);
+    System.out.println("Instructions (estimate): " + instructions);
+
+    return instructions;
   }
 
   public String getInstanceURL(String type, Map<String, String> parameters) {
