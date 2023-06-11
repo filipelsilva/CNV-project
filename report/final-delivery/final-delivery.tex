@@ -45,7 +45,7 @@ could do a work similar to the auto scaler and load balancer encountered in the
 Amazon Web Services (AWS).
 
 With this objective in mind, we were given a workload (EcoWork@Cloud, in the
-\textit{webserver} folder) that created a webserver with three scenarios:
+\textit{webserver} folder) that created a \textit{webserver} with three scenarios:
 
 \begin{itemize}
     \item Image Compression
@@ -76,14 +76,14 @@ An overview of the steps taken to deploy this system is as follows:
 \begin{enumerate}
     \item Use the scripts to create the images for both the Load Balancer/Auto
         Scaler (\textit{LBAS}) - image name \textit{CNV-LBAS} - and the
-        Webserver - image name \textit{CNV-Webserver}.
+        \textit{Webserver} - image name \textit{CNV-Webserver}.
     \item Use the scripts to deploy an EC2 instance with the \textit{CNV-LBAS}
         image, and run it.
     \item This instance will deploy other EC2 instances with the
         \textit{CNV-Webserver} image, according to the load it receives.
     \item Also accordingly to the load, the \textit{LBAS} instance will select
         an instance, using the parameters in the request and the metrics gotten
-        from the webserver instances (that are running the workload provided
+        from the \textit{webserver} instances (that are running the workload provided
         with a custom Javassist tool to gather and send data to the Load
         Balancer).
     \item It can also choose to launch a Lambda function, if it deems it
@@ -101,7 +101,7 @@ of a custom connector to the Amazon DynamoDB, a key-value store, used to create
 and send items to DymanoDB. These will be used to keep certain information about
 the program we will run it with.
 
-This module is then ran with the webserver, and allows to know how many
+This module is then ran with the \textit{webserver}, and allows to know how many
 instructions were ran for a specific scenario of it, by intercepting each one of
 the functions that correspond to a scenario:
 
@@ -124,7 +124,10 @@ request to.
 
 In order to keep the number of requests to DynamoDB to a minimum, we only
 update the information kept there every \textit{BATCH\_SIZE} requests (default
-value is 5, but can be changed in the \textit{ICount} class).
+value is 5, but can be changed in the \textit{ICount} class). The information is
+kept in a "cache" (a \textit{Map} in the class for each scenario, alongside a
+\textit{Float} for the \textit{InsectWars} scenario: it has no separator between
+different types of workloads, such as a world or a type of picture format).
 
 The data sent to DynamoDB is already processed as well (which means that we are
 sending to it only the computed statistics and not all the parameters), in order
@@ -158,54 +161,15 @@ metrics count for 50\% of the new metric, and all the older metrics count for
 the other 50\%. This gives us more adaptability to each workload according to
 the conditions.
 
-\subsection{LBAS}
+\subsection{\textit{LBAS}}
 
 \subsubsection{General}
 
+falar do endpoint de test
 
 \subsubsection{Load Balancer}
 
-
-\subsubsection{Auto Scaler}
-
-
-\subsection{Scripts}
-
-The \textit{scripts} folder contains the scripts to create the images and deploy
-the first instance of this system - the \textit{LBAS}.
-
-Here are the scripts alongside a quick explanation for each:
-
 % TODO
-
-Each instance (and script) needs to source the script \textit{config.sh}, which
-keeps the environment variables needed for the scripts to work, relating to
-security groups, key pairs, etc.
-
-\subsection{Webserver}
-
-For the intermediate delivery, we have implemented the following features:
-\begin{itemize}
-    \item Instrumentation of the EcoWork@Cloud workload using a JavassistAgent:
-        in this case we modified the ICount JavassistAgent to be mindful of the
-        multithreaded nature of the workload, saving (locally, for now) the
-        instruction count of every thread in a map;
-    \item Scripts to create the image and deploy/terminate deployment in AWS,
-        along with load balancer and auto scaler provided by AWS.
-\end{itemize}
-
-For the final delivery, the following goals apply:
-\begin{itemize}
-    \item Update the (already) modified ICount JavassistAgent to send its
-        statistics to DynamoDB (just periodically, to keep performance), so that
-        multiple runs can be better distributed across nodes;
-    \item Implement a load balancer in Java that uses the information gained
-        from ICount (retrieved from DynamoDB) to distribute the load across
-        nodes;
-    \item Implement an auto scaler in Java that uses the CPU utilizations of the
-        various nodes to determine if a node needs creating/destroying.
-\end{itemize}
-
 Regarding the load balancer, our goal is to distribute the load as evenly as
 possible across all nodes, in order to keep the number of nodes spawned at a
 minimum. It can also choose to serve a request using a Lambda instead of a
@@ -214,22 +178,9 @@ in startup. Especially when the system is under load and more requests are being
 made while the LB spawns more nodes, Lambdas will be a good option to support
 users while the system is still trying to scale up.
 
-For the metrics used by the load balancer, we will keep in mind the number of
-instructions executed per request, with different granularity based on the
-workload that is provided:
+\subsubsection{Auto Scaler}
 
-\begin{itemize}
-    \item \textit{Image Compression} - there are 3 image formats: PNG, JPEG and
-        BMP. We will keep a record of the number of instructions per image size,
-        per compression factor and format;
-    \item \textit{Foxes and Rabbits} - we will keep a record of number of
-        instructions per generation, per world (the generation doesn't matter
-        much in this case);
-    \item \textit{Insect Wars} - we will keep a record of number of instructions
-        per round, per number of insects (total) and ratio between the numbers
-        of each army.
-\end{itemize}
-
+% TODO
 Regarding the auto scaler, the metric we will keep in mind is the average CPU
 utilization of each node: if the system detects that more requests are being
 made and the CPU utilization is above a certain threshold, it will spawn a new
@@ -238,5 +189,40 @@ destroy nodes, in order to keep the cost of running as low as possible. The
 algorithm will scale up by creating new nodes, and scale down by marking the
 nodes it wants to destroy for termination, however they can only be terminated
 once there are no more requests being served by them.
+
+\subsection{Scripts}
+
+The \textit{scripts} folder contains the scripts to create the images and deploy
+the first instance of this system - the \textit{LBAS}.
+
+Here are the scripts alongside a quick explanation for each:
+
+\begin{itemize}
+    \item \textit{config.sh} - keeps all the variables needed to contact AWS.
+    \item \textit{create-image.sh} - creates the \textit{webserver} and \textit{LBAS}
+        images. It is composed of three other scripts:
+    \subitem \textit{install-vm.sh} - Installs the needed packages and programs
+        in an EC2 instance.
+    \subitem \textit{launch-vm.sh} - Launches an EC2 instance. Is used on
+        \textit{create-image.sh} but also as a standalone, to launch the
+        \textit{LBAS} instance.
+    \subitem \textit{test-vm.sh} - Tests that the instance is ready to go, using
+        the \textit{/test} endpoint that is found in all programs used in this
+        system.
+\end{itemize}
+
+Each instance (and script) needs to source the script \textit{config.sh}, which
+keeps the environment variables needed for the scripts to work, relating to
+security groups, key pairs, etc.
+
+\subsection{\textit{Webserver}}
+
+falar do endpoint de test
+
+\section{Things to improve}
+
+falar de load balancing e esperar para apagar instance
+
+\section{Conclusion}
 
 \end{document}
