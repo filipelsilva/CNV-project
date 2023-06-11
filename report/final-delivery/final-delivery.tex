@@ -8,9 +8,6 @@
 
 % ================ SETTINGS ====================
 
-% no page numbers and the sorts
-% \pagenumbering{gobble}
-
 % no hyphenation
 \tolerance=1
 \emergencystretch=\maxdimen
@@ -72,14 +69,37 @@ the \textit{src} folder):
 
 \section{Design}
 
+\subsection{General}
+
+An overview of the steps taken to deploy this system is as follows:
+
+\begin{enumerate}
+    \item Use the scripts to create the images for both the Load Balancer/Auto
+        Scaler (\textit{LBAS}) - image name \textit{CNV-LBAS} - and the
+        Webserver - image name \textit{CNV-Webserver}.
+    \item Use the scripts to deploy an EC2 instance with the \textit{CNV-LBAS}
+        image, and run it.
+    \item This instance will deploy other EC2 instances with the
+        \textit{CNV-Webserver} image, according to the load it receives.
+    \item Also accordingly to the load, the \textit{LBAS} instance will select
+        an instance, using the parameters in the request and the metrics gotten
+        from the webserver instances (that are running the workload provided
+        with a custom Javassist tool to gather and send data to the Load
+        Balancer).
+    \item It can also choose to launch a Lambda function, if it deems it
+        necessary (like when a machine is starting up and cannot receive
+        requests yet). It will only use these when necessary, due to their high
+        cost relatively to EC2 instances.
+\end{enumerate}
+
 \subsection{Javassist}
 
 The Javassist module consists of two main parts: the \textit{ICount} tool,
 modified to report the instruction count per thread (because the workload is
 multithreaded); and the \textit{AmazonDynamoDBConnector} class, which consists
-of a connector to the Amazon DynamoDB, a key-value store, in order to keep
-certain information about the program we will run it with, which we will discuss
-later.
+of a custom connector to the Amazon DynamoDB, a key-value store, used to create
+and send items to DymanoDB. These will be used to keep certain information about
+the program we will run it with.
 
 This module is then ran with the webserver, and allows to know how many
 instructions were ran for a specific scenario of it, by intercepting each one of
@@ -88,19 +108,71 @@ the functions that correspond to a scenario:
 \begin{itemize}
     \item \textit{Image Compression} - \textit{process} function, with the
         following arguments: image, target format and compression quality.
-    \item \textit{Foxes and Rabbits} - we will keep a record of number of
-        instructions per generation, per world (the generation doesn't matter
-        much in this case);
-    \item \textit{Insect Wars} - we will keep a record of number of instructions
-        per round, per number of insects (total) and ratio between the numbers
-        of each army.
+    \item \textit{Foxes and Rabbits} - \textit{populate} and
+        \textit{runSimulation} functions: the first to get the world that was
+        requested (important for the metrics); the second to get the number of
+        generations to simuate.
+    \item \textit{Insect Wars} - \textit{war} function, with the following
+        arguments: size of each army and the maximum number of simulation
+        rounds.
 \end{itemize}
+
+The number of instructions per thread is saved on a map, and then metrics are
+created according to each scenario, and then sent to DynamoDB in order to be
+read later by the Load Balancer, in order to choose an EC2 instance to send the
+request to.
+
+In order to keep the number of requests to DynamoDB to a minimum, we only
+update the information kept there every \textit{BATCH\_SIZE} requests (default
+value is 5, but can be changed in the \textit{ICount} class).
+
+The data sent to DynamoDB is already processed as well (which means that we are
+sending to it only the computed statistics and not all the parameters), in order
+to reduce computation on the Load Balancer side.
+
+The statistics sent to DynamoDB are the following:
+
+\begin{itemize}
+    \item \textit{Image Compression} - the metric chosen was
+        \[\frac{I}{width*height*f}\], where \textit{I} is the number of
+        instructions, \textit{width} and \textit{height} are the width and
+        height of the image and \textit{f} is the compression factor. This
+        metric is then sent to DynamoDB for each format: PNG, JPEG and BMP. 
+    \item \textit{Foxes and Rabbits} - the metric chosen was \[\frac{I}{G}\], 
+        where \textit{I} is the number of instructions and \textit{G} is the
+        number of generations. This metric is then sent to DynamoDB for each
+        world (the generation doesn't matter much for this workload).
+    \item \textit{Insect Wars} - the metric chosen was
+        \[\frac{I*r}{max*(sz1+sz2)}\], where \textit{I} is the number of
+        instructions, \textit{r} is the ratio between the sizes of the two
+        armies, \textit{max} is the maximum number of rounds and \textit{sz1}
+        and \textit{sz2} are the sizes of the armies. The ratio is kept in mind
+        because it changes somewhat the number of instructions (a bigger
+        disparity between armies leads to a quicker battle and less instructions
+        ran).
+\end{itemize}
+
+It is also relevant to mention that the statistics are updated and not replaced
+every 5 requests: it follows an exponential weight, where the new request's
+metrics count for 50\% of the new metric, and all the older metrics count for
+the other 50\%. This gives us more adaptability to each workload according to
+the conditions.
 
 \subsection{LBAS}
 
 
 \subsection{Scripts}
 
+The \textit{scripts} folder contains the scripts to create the images and deploy
+the first instance of this system - the \textit{LBAS}.
+
+Here are the scripts alongside a quick explanation for each:
+
+% TODO
+
+Each instance (and script) needs to source the script \textit{config.sh}, which
+keeps the environment variables needed for the scripts to work, relating to
+security groups, key pairs, etc.
 
 \subsection{Webserver}
 
