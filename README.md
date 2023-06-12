@@ -11,16 +11,7 @@ project. Name it `awskeypair.pem`.
 
 3.0. create a copy of file `config.sh.example` and name it `config.sh`. Fill in the `<CHANGE_ME>` fields with the appropriate values.
 
-3.1. To create the image, `./create-image.sh`
+3.1. To create the images, `./create-image.sh webserver && ./create-image.sh
+lbas`
 
-3.2. To launch the whole deployment, `./launch-deployment.sh`
-
-3.3. To destroy the whole deployment, `./terminate-deployment.sh`
-
-## Doubts
-
-[ ] Usage of Long/Int in javassist
-[ ] Webserver with image support breaks
-[ ] NullPointerException when running amazondbconnector in icount
-[ ] Stats for InsectWars
-[ ] Handle POST requests in LoadBalancer (for image processing)
+3.2. To launch the whole deployment, `./launch-vm.sh CNV-LBAS`
