@@ -205,6 +205,7 @@ public class AutoScaler {
       instanceCount.set(instanceCountLocal);
       instanceAvailableCount.set(instanceAvailableCountLocal);
 
+      System.out.println("-------------------------------------------");
       System.out.println(String.format("Number of instances: %d", instanceCountLocal));
       System.out.println(
           String.format("Number of ready instances: %d", instanceAvailableCountLocal));
@@ -226,6 +227,8 @@ public class AutoScaler {
 
       avgCPU /= instanceAvailableCountLocal;
       System.out.println("Average CPU utilization = " + avgCPU);
+
+      System.out.println("-------------------------------------------");
 
       if (avgCPU < MIN_CPU_USAGE) {
         System.out.println(String.format("Average CPU utilization is under %d%%", MIN_CPU_USAGE));
