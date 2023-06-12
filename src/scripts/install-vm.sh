@@ -24,7 +24,7 @@ scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAIR_PATH $DIR/../scripts/con
 # Send jars to instance.
 if [ "$1" = "webserver" ]; then
 	scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAIR_PATH $DIR/../javassist/target/JavassistWrapper-1.0-jar-with-dependencies.jar ec2-user@$(cat instance.dns):
-	scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAIR_PATH $DIR/../workload/webserver/target/webserver-1.0.0-SNAPSHOT-jar-with-dependencies.jar ec2-user@$(cat instance.dns):
+	scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAIR_PATH $DIR/../webserver/webserver/target/webserver-1.0.0-SNAPSHOT-jar-with-dependencies.jar ec2-user@$(cat instance.dns):
 else
 	scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAIR_PATH $DIR/../lbas/target/LBAS-1.0-jar-with-dependencies.jar ec2-user@$(cat instance.dns):
 fi
