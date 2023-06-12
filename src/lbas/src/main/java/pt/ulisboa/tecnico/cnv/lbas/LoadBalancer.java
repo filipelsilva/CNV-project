@@ -311,7 +311,7 @@ public class LoadBalancer {
 
     // Do a round robin on the instances, sorted by cpu usage so that the first ones
     // are the ones with the lowest usage
-    int size = instancesSorted.size(); 
+    int size = instancesSorted.size();
     if (lastSize != size) {
       counter = 0;
       lastSize = size;

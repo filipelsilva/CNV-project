@@ -181,11 +181,14 @@ public class AutoScaler {
         System.out.println("Instance State : " + state + ".");
       }
 
+      System.out.println("Usage of instances:");
+      System.out.println(instanceUsage);
+
       System.out.println(String.format("Number of instances: %d", instanceCount));
       System.out.println(String.format("Number of ready instances: %d", instanceAvailableCount));
       if (instanceCountLocal == 0) {
         System.out.println("Starting a new instance.");
-        // startNewInstance();
+        startNewInstance();
         return;
       }
 
@@ -207,11 +210,12 @@ public class AutoScaler {
                 .map(ConcurrentHashMap.Entry::getKey)
                 .orElse(null);
 
+        System.out.println("Stopping instance " + instanceWithMaxUsage.getInstanceId());
         stopInstance(instanceWithMaxUsage);
       } else if (avgCPU > 80) {
         System.out.println(String.format("Average CPU utilization is over %d%%", MAX_CPU_USAGE));
         System.out.println("Starting a new instance.");
-        // startNewInstance();
+        startNewInstance();
       }
 
     } catch (AmazonServiceException ase) {
