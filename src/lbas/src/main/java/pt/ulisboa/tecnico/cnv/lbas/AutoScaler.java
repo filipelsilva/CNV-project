@@ -192,25 +192,25 @@ public class AutoScaler {
           if (systemStatus.equals("ok")) {
             instanceAvailableCountLocal++;
             instanceUsage.put(instance, -1d);
+
+            if (datapoints.size() != 0) {
+              Double cpuUtil = datapoints.get(datapoints.size() - 1).getAverage();
+              avgCPU += cpuUtil;
+
+              // Update instance usage
+              // instanceUsage.put(instance, cpuUtil);
+              instanceUsage.compute(instance, (k, v) -> cpuUtil);
+
+              System.out.println(
+                  "\tLAST CPU utilization for instance "
+                  + iid
+                  + " = "
+                  + datapoints.get(datapoints.size() - 1).getAverage());
+            }
+            // for (Datapoint dp : datapoints) {
+            //   System.out.println(" CPU utilization for instance " + iid + " = " + dp.getAverage());
+            // }
           }
-
-          if (datapoints.size() != 0) {
-            Double cpuUtil = datapoints.get(datapoints.size() - 1).getAverage();
-            avgCPU += cpuUtil;
-
-            // Update instance usage
-            // instanceUsage.put(instance, cpuUtil);
-            instanceUsage.compute(instance, (k, v) -> cpuUtil);
-
-            System.out.println(
-                "\tLAST CPU utilization for instance "
-                    + iid
-                    + " = "
-                    + datapoints.get(datapoints.size() - 1).getAverage());
-          }
-          // for (Datapoint dp : datapoints) {
-          //   System.out.println(" CPU utilization for instance " + iid + " = " + dp.getAverage());
-          // }
         }
       }
 
@@ -237,7 +237,7 @@ public class AutoScaler {
         return;
       }
 
-      avgCPU /= instanceAvailableCountLocal;
+      avgCPU /= (double)instanceAvailableCountLocal;
       System.out.println("Average CPU utilization = " + avgCPU);
 
       System.out.println("-------------------------------------------");
