@@ -11,8 +11,12 @@ import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import com.amazonaws.services.ec2.model.DescribeImagesRequest;
 import com.amazonaws.services.ec2.model.DescribeImagesResult;
+import com.amazonaws.services.ec2.model.DescribeInstanceStatusRequest;
+import com.amazonaws.services.ec2.model.DescribeInstanceStatusResult;
 import com.amazonaws.services.ec2.model.Filter;
 import com.amazonaws.services.ec2.model.Instance;
+import com.amazonaws.services.ec2.model.InstanceStatus;
+import com.amazonaws.services.ec2.model.InstanceStatusDetails;
 import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
@@ -21,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -66,7 +71,7 @@ public class AutoScaler {
     AMI_ID = result.getImages().get(0).getImageId();
   }
 
-  private Set<Instance> getInstances(AmazonEC2 ec2) throws Exception {
+  private Set<Instance> getInstances() throws Exception {
     Set<Instance> instances = new HashSet<Instance>();
     for (Reservation reservation : ec2.describeInstances().getReservations()) {
       instances.addAll(reservation.getInstances());
@@ -86,10 +91,6 @@ public class AutoScaler {
           .withKeyName(KEY_NAME)
           .withSecurityGroupIds(SEC_GROUP_ID);
       RunInstancesResult runInstancesResult = ec2.runInstances(runInstancesRequest);
-
-      // Add instance to map
-      Instance newInstance = runInstancesResult.getReservation().getInstances().get(0);
-      instanceUsage.put(newInstance, 0d);
 
     } catch (AmazonServiceException ase) {
       System.out.println("Caught Exception: " + ase.getMessage());
@@ -125,15 +126,15 @@ public class AutoScaler {
       // -1 to count for the LBAS instance
       // Totally unrelated fact: the first iteration of this program that worked
       // killed itself :D
-      int instanceCountLocal = -1;
-      int instanceAvailableCountLocal = -1;
+      int instanceCountLocal = 0;
+      int instanceAvailableCountLocal = 0;
+      boolean pendingInstances = false;
 
       System.out.println("===========================================");
       System.out.println("Checking data...");
       System.out.println("===========================================");
 
-      Set<Instance> instances = getInstances(ec2);
-      System.out.println("total instances = " + instances.size());
+      Set<Instance> instances = getInstances();
 
       Dimension instanceDimension = new Dimension();
       instanceDimension.setName("InstanceId");
@@ -143,9 +144,13 @@ public class AutoScaler {
       for (Instance instance : instances) {
         String iid = instance.getInstanceId();
         String state = instance.getState().getName();
-        String amiid = instance.getImageId(); // TODO add check for image id later
-        if (state.equals("running")) { // && amiid.equals(AMI_ID))
+        String amiid = instance.getImageId();
+        if (state.equals("pending")) {
+          pendingInstances = true;
+
+        } else if (state.equals("running") && amiid.equals(AMI_ID)) {
           System.out.println("running instance id = " + iid);
+
           instanceDimension.setValue(iid);
           GetMetricStatisticsRequest request =
               new GetMetricStatisticsRequest()
@@ -159,44 +164,62 @@ public class AutoScaler {
 
           List<Datapoint> datapoints = cloudWatch.getMetricStatistics(request).getDatapoints();
 
+          // Get status check
+          DescribeInstanceStatusRequest statusRequest = new DescribeInstanceStatusRequest().withInstanceIds(iid);
+          DescribeInstanceStatusResult statusResult = ec2.describeInstanceStatus(statusRequest);
+          InstanceStatus instanceStatus = statusResult.getInstanceStatuses().get(0);
+          // InstanceStatusDetails statusDetails = instanceStatus.getInstanceStatus().getDetails().get(0);
+          String systemStatus = instanceStatus.getSystemStatus().getStatus();
+          // String instanceStatusCheck = statusDetails.getStatus();
+          System.out.println("System Status Check: " + systemStatus);
+          // System.out.println("Instance Status Check: " + instanceStatusCheck);
+
           // Because an instance may be running, but still be initializing
           instanceCountLocal++;
-          if (datapoints.size() != 0) {
+          if (systemStatus.equals("ok")) {
             instanceAvailableCountLocal++;
+            instanceUsage.put(instance, 0d);
+          }
 
+          if (datapoints.size() != 0) {
             Double cpuUtil = datapoints.get(datapoints.size() - 1).getAverage();
             avgCPU += cpuUtil;
 
             // Update instance usage
-            instanceUsage.put(instance, cpuUtil);
+            // instanceUsage.put(instance, cpuUtil);
+            instanceUsage.compute(instance, (k, v) -> cpuUtil);
 
             System.out.println(
-                " LAST CPU utilization for instance "
+                "\tLAST CPU utilization for instance "
                     + iid
                     + " = "
                     + datapoints.get(datapoints.size() - 1).getAverage());
           }
-          for (Datapoint dp : datapoints) {
-            System.out.println(" CPU utilization for instance " + iid + " = " + dp.getAverage());
-          }
-        } else {
-          System.out.println("instance id = " + iid);
+          // for (Datapoint dp : datapoints) {
+          //   System.out.println(" CPU utilization for instance " + iid + " = " + dp.getAverage());
+          // }
         }
-        System.out.println("Instance State : " + state + ".");
       }
 
       instanceCount.set(instanceCountLocal);
       instanceAvailableCount.set(instanceAvailableCountLocal);
 
-      System.out.println("Usage of instances:");
-      System.out.println(instanceUsage);
-
       System.out.println(String.format("Number of instances: %d", instanceCountLocal));
-      System.out.println(String.format("Number of ready instances: %d", instanceAvailableCountLocal));
+      System.out.println(
+          String.format("Number of ready instances: %d", instanceAvailableCountLocal));
+
+      System.out.println("Usage of instances:");
+      for (Map.Entry<Instance, Double> entry : instanceUsage.entrySet()) {
+        System.out.println(
+            String.format("Instance %s: %s%%", entry.getKey().getInstanceId(), entry.getValue()));
+      }
 
       if (instanceCountLocal == 0) {
-        System.out.println("Starting a new instance.");
-        startNewInstance();
+        if (pendingInstances) {
+          System.out.println("There are pending instances. Waiting...");
+        } else {
+          startNewInstance();
+        }
         return;
       }
 
@@ -205,24 +228,24 @@ public class AutoScaler {
 
       if (avgCPU < MIN_CPU_USAGE) {
         System.out.println(String.format("Average CPU utilization is under %d%%", MIN_CPU_USAGE));
-        System.out.println("Stopping an instance.");
         if (instanceCountLocal == 1) {
           System.out.println("Only one instance running. Cannot stop.");
           return;
         }
+        System.out.println("Stopping an instance.");
 
         // Stop the instance with the lowest CPU utilization
-        Instance instanceWithMaxUsage =
+        Instance instanceWithMinUsage =
             instanceUsage.entrySet().stream()
-                .max(ConcurrentHashMap.Entry.comparingByValue())
+                .min(ConcurrentHashMap.Entry.comparingByValue())
                 .map(ConcurrentHashMap.Entry::getKey)
                 .orElse(null);
 
-        System.out.println("Stopping instance " + instanceWithMaxUsage.getInstanceId());
-        stopInstance(instanceWithMaxUsage);
+        System.out.println("Stopping instance " + instanceWithMinUsage.getInstanceId());
+        stopInstance(instanceWithMinUsage);
+
       } else if (avgCPU > 80) {
         System.out.println(String.format("Average CPU utilization is over %d%%", MAX_CPU_USAGE));
-        System.out.println("Starting a new instance.");
         startNewInstance();
       }
 

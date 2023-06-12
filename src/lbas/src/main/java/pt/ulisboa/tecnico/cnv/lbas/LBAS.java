@@ -19,12 +19,13 @@ public class LBAS {
     loadBalancer = new LoadBalancer(instances, instanceCount, instanceAvailableCount);
 
     ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
-    Runnable autoscalerTask = () -> {
-        autoScaler.analyseInstances();
-    };
+    Runnable autoscalerTask =
+        () -> {
+          autoScaler.analyseInstances();
+        };
 
     // Run the autoscaler task every 30 seconds
-    executorService.scheduleAtFixedRate(autoscalerTask, 0, 5, TimeUnit.SECONDS);
+    executorService.scheduleAtFixedRate(autoscalerTask, 0, 10, TimeUnit.SECONDS);
 
     // Run the load balancer forever
     loadBalancer.serveForever();
