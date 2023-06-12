@@ -184,8 +184,8 @@ public class AutoScaler {
       System.out.println("Usage of instances:");
       System.out.println(instanceUsage);
 
-      System.out.println(String.format("Number of instances: %d", instanceCount));
-      System.out.println(String.format("Number of ready instances: %d", instanceAvailableCount));
+      System.out.println(String.format("Number of instances: %d", instanceCount.get()));
+      System.out.println(String.format("Number of ready instances: %d", instanceAvailableCount.get()));
       if (instanceCountLocal == 0) {
         System.out.println("Starting a new instance.");
         startNewInstance();
