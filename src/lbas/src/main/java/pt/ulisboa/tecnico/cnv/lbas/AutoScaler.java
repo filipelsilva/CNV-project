@@ -121,8 +121,12 @@ public class AutoScaler {
   public void analyseInstances() {
     try {
       Double avgCPU = 0d;
-      int instanceCountLocal = 0;
-      int instanceAvailableCountLocal = 0;
+
+      // -1 to count for the LBAS instance
+      // Totally unrelated fact: the first iteration of this program that worked
+      // killed itself :D
+      int instanceCountLocal = -1;
+      int instanceAvailableCountLocal = -1;
 
       System.out.println("===========================================");
       System.out.println("Checking data...");
@@ -156,9 +160,9 @@ public class AutoScaler {
           List<Datapoint> datapoints = cloudWatch.getMetricStatistics(request).getDatapoints();
 
           // Because an instance may be running, but still be initializing
-          instanceCountLocal = instanceCount.incrementAndGet();
+          instanceCountLocal++;
           if (datapoints.size() != 0) {
-            instanceAvailableCountLocal = instanceAvailableCount.incrementAndGet();
+            instanceAvailableCountLocal++;
 
             Double cpuUtil = datapoints.get(datapoints.size() - 1).getAverage();
             avgCPU += cpuUtil;
@@ -181,11 +185,15 @@ public class AutoScaler {
         System.out.println("Instance State : " + state + ".");
       }
 
+      instanceCount.set(instanceCountLocal);
+      instanceAvailableCount.set(instanceAvailableCountLocal);
+
       System.out.println("Usage of instances:");
       System.out.println(instanceUsage);
 
-      System.out.println(String.format("Number of instances: %d", instanceCount.get()));
-      System.out.println(String.format("Number of ready instances: %d", instanceAvailableCount.get()));
+      System.out.println(String.format("Number of instances: %d", instanceCountLocal));
+      System.out.println(String.format("Number of ready instances: %d", instanceAvailableCountLocal));
+
       if (instanceCountLocal == 0) {
         System.out.println("Starting a new instance.");
         startNewInstance();
