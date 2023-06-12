@@ -27,11 +27,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class AutoScaler {
 
   private static long OBS_TIME = 1000 * 60 * 20;
+  private static Integer DELAY_KILL = 60;
   private static String AWS_REGION = "us-east-1";
   private static String AMI_ID;
   private static String KEY_NAME = "awskeypair";
@@ -100,22 +104,30 @@ public class AutoScaler {
   }
 
   private void stopInstance(Instance instance) {
-    try {
-      String instanceId = instance.getInstanceId();
-      System.out.println("Stopping instance " + instanceId);
-      TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
-      termInstanceReq.withInstanceIds(instanceId);
-      ec2.terminateInstances(termInstanceReq);
+    ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+    Runnable autoscalerTask =
+        () -> {
+          try {
+            String instanceId = instance.getInstanceId();
+            System.out.println("Stopping instance " + instanceId);
+            TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
+            termInstanceReq.withInstanceIds(instanceId);
+            ec2.terminateInstances(termInstanceReq);
 
-      // Remove this instance from the load balancer
-      instanceUsage.remove(instance);
+          } catch (AmazonServiceException ase) {
+            System.out.println("Caught Exception: " + ase.getMessage());
+            System.out.println("Reponse Status Code: " + ase.getStatusCode());
+            System.out.println("Error Code: " + ase.getErrorCode());
+            System.out.println("Request ID: " + ase.getRequestId());
+          }
+        };
 
-    } catch (AmazonServiceException ase) {
-      System.out.println("Caught Exception: " + ase.getMessage());
-      System.out.println("Reponse Status Code: " + ase.getStatusCode());
-      System.out.println("Error Code: " + ase.getErrorCode());
-      System.out.println("Request ID: " + ase.getRequestId());
-    }
+    // Remove this instance from the load balancer
+    // This way, the load balancer will not choose it for further requests
+    instanceUsage.remove(instance);
+
+    // After DELAY_KILL, kill the instance. This is to give it time to return to someone
+    executorService.scheduleAtFixedRate(autoscalerTask, DELAY_KILL, 0, TimeUnit.SECONDS);
   }
 
   public void analyseInstances() {
