@@ -16,7 +16,6 @@ import com.amazonaws.services.ec2.model.DescribeInstanceStatusResult;
 import com.amazonaws.services.ec2.model.Filter;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceStatus;
-import com.amazonaws.services.ec2.model.InstanceStatusDetails;
 import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
@@ -165,10 +164,12 @@ public class AutoScaler {
           List<Datapoint> datapoints = cloudWatch.getMetricStatistics(request).getDatapoints();
 
           // Get status check
-          DescribeInstanceStatusRequest statusRequest = new DescribeInstanceStatusRequest().withInstanceIds(iid);
+          DescribeInstanceStatusRequest statusRequest =
+              new DescribeInstanceStatusRequest().withInstanceIds(iid);
           DescribeInstanceStatusResult statusResult = ec2.describeInstanceStatus(statusRequest);
           InstanceStatus instanceStatus = statusResult.getInstanceStatuses().get(0);
-          // InstanceStatusDetails statusDetails = instanceStatus.getInstanceStatus().getDetails().get(0);
+          // InstanceStatusDetails statusDetails =
+          // instanceStatus.getInstanceStatus().getDetails().get(0);
           String systemStatus = instanceStatus.getSystemStatus().getStatus();
           // String instanceStatusCheck = statusDetails.getStatus();
           System.out.println("System Status Check: " + systemStatus);
@@ -178,7 +179,7 @@ public class AutoScaler {
           instanceCountLocal++;
           if (systemStatus.equals("ok")) {
             instanceAvailableCountLocal++;
-            instanceUsage.put(instance, 0d);
+            instanceUsage.put(instance, -1d);
           }
 
           if (datapoints.size() != 0) {
