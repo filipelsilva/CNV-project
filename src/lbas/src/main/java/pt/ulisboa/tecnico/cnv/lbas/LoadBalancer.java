@@ -427,10 +427,10 @@ public class LoadBalancer {
         String targetFormat = resultSplits[0].split(":")[1].split(";")[0];
         String compressionFactor = resultSplits[0].split(":")[2].split(";")[0];
 
-        Map<String, String> params = new HashMap<>();
-        params.put("targetFormat", targetFormat);
-        params.put("compressionFactor", compressionFactor);
-        params.put("image", resultSplits[1]);
+        Map<String, String> parameters = new HashMap<>();
+        parameters.put("targetFormat", targetFormat);
+        parameters.put("compressionFactor", compressionFactor);
+        parameters.put("image", resultSplits[1]);
 
         // Send request to (a) server
         String url =
