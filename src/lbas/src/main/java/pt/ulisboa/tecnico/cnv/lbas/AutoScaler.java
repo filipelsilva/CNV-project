@@ -39,7 +39,7 @@ public class AutoScaler {
   private static String AWS_REGION = "us-east-1";
   private static String AMI_ID;
   private static String KEY_NAME = "awskeypair";
-  private static String SEC_GROUP_ID = System.getenv("SEC_GROUP_ID");
+  private static String SEC_GROUP_ID = System.getenv("AWS_SECURITY_GROUP");
   private static Integer MAX_CPU_USAGE = 80;
   private static Integer MIN_CPU_USAGE = 20;
 
