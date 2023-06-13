@@ -173,27 +173,10 @@ public class ICount extends CodeDumper {
 
     float ratio = (float) sz1 / (float) sz2;
     if (sz1 > sz2) {
-      ratio = sz2 / sz1;
+      ratio = (float) sz2 / (float) sz1;
     }
     Float instructionsPerRoundPerSizeTimesRatio =
         (float) getThreadInfo(threadID) / (float) (max * (sz1 + sz2) * ratio);
-    System.out.println(
-        String.format("[%s Insect Wars] Ratio is %s", ICount.class.getSimpleName(), ratio));
-    System.out.println(
-        String.format(
-            "[%s Insect Wars] Number of instructions ran is %s",
-            ICount.class.getSimpleName(), getThreadInfo(threadID)));
-    System.out.println(
-        String.format(
-            "[%s Insect Wars] Max simulation rounds is %s", ICount.class.getSimpleName(), max));
-    System.out.println(
-        String.format("[%s Insect Wars] Army 1 size is %s", ICount.class.getSimpleName(), sz1));
-    System.out.println(
-        String.format("[%s Insect Wars] Army 2 size is %s", ICount.class.getSimpleName(), sz2));
-    System.out.println(
-        String.format(
-            "[%s Insect Wars] Instructions per round per size times ratio is %s",
-            ICount.class.getSimpleName(), instructionsPerRoundPerSizeTimesRatio));
 
     // Update local cache map with info
     if (InsectWarsCache == null) {
