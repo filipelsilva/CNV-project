@@ -24,6 +24,7 @@ import com.sun.net.httpserver.HttpServer;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -70,11 +71,15 @@ public class LoadBalancer {
     createTable("FoxesAndRabbits", "world");
     createTable("ImageCompression", "format");
     createTable("InsectWars", "instructionsPerRoundPerSizeTimesRatio");
-    System.out.println("Creating tables...");
+    log("Creating tables...");
     waitForTable("FoxesAndRabbits");
     waitForTable("ImageCompression");
     waitForTable("InsectWars");
-    System.out.println("Tables ready to go!");
+    log("Tables ready to go!");
+  }
+
+  public void log(String toPrint) {
+    System.out.println(String.format("[%s] %s", this.getClass().getSimpleName(), toPrint));
   }
 
   public void waitForTable(String tableName) {
@@ -112,20 +117,20 @@ public class LoadBalancer {
       TableUtils.createTableIfNotExists(dynamoDBClient, createTableRequest);
 
     } catch (AmazonServiceException ase) {
-      System.out.println(
+      log(
           "Caught an AmazonServiceException, which means your request made it "
               + "to AWS, but was rejected with an error response for some reason.");
-      System.out.println("Error Message:    " + ase.getMessage());
-      System.out.println("HTTP Status Code: " + ase.getStatusCode());
-      System.out.println("AWS Error Code:   " + ase.getErrorCode());
-      System.out.println("Error Type:       " + ase.getErrorType());
-      System.out.println("Request ID:       " + ase.getRequestId());
+      log("Error Message:    " + ase.getMessage());
+      log("HTTP Status Code: " + ase.getStatusCode());
+      log("AWS Error Code:   " + ase.getErrorCode());
+      log("Error Type:       " + ase.getErrorType());
+      log("Request ID:       " + ase.getRequestId());
     } catch (AmazonClientException ace) {
-      System.out.println(
+      log(
           "Caught an AmazonClientException, which means the client encountered "
               + "a serious internal problem while trying to communicate with AWS, "
               + "such as not being able to access the network.");
-      System.out.println("Error Message: " + ace.getMessage());
+      log("Error Message: " + ace.getMessage());
     }
   }
 
@@ -168,24 +173,24 @@ public class LoadBalancer {
     try {
       ScanRequest scanRequest = new ScanRequest(tableName).withScanFilter(scanFilter);
       ScanResult scanResult = dynamoDBClient.scan(scanRequest);
-      System.out.println("Result: " + scanResult);
+      log("Result: " + scanResult);
       return scanResult;
 
     } catch (AmazonServiceException ase) {
-      System.out.println(
+      log(
           "Caught an AmazonServiceException, which means your request made it "
               + "to AWS, but was rejected with an error response for some reason.");
-      System.out.println("Error Message:    " + ase.getMessage());
-      System.out.println("HTTP Status Code: " + ase.getStatusCode());
-      System.out.println("AWS Error Code:   " + ase.getErrorCode());
-      System.out.println("Error Type:       " + ase.getErrorType());
-      System.out.println("Request ID:       " + ase.getRequestId());
+      log("Error Message:    " + ase.getMessage());
+      log("HTTP Status Code: " + ase.getStatusCode());
+      log("AWS Error Code:   " + ase.getErrorCode());
+      log("Error Type:       " + ase.getErrorType());
+      log("Request ID:       " + ase.getRequestId());
     } catch (AmazonClientException ace) {
-      System.out.println(
+      log(
           "Caught an AmazonClientException, which means the client encountered "
               + "a serious internal problem while trying to communicate with AWS, "
               + "such as not being able to access the network.");
-      System.out.println("Error Message: " + ace.getMessage());
+      log("Error Message: " + ace.getMessage());
     }
     return null;
   }
@@ -193,7 +198,7 @@ public class LoadBalancer {
   public Integer getInstructionsFoxesAndRabbits(Map<String, String> parameters) {
     int n_generations = Integer.parseInt(parameters.get("generations"));
     int world = Integer.parseInt(parameters.get("world"));
-    int n_scenario = Integer.parseInt(parameters.get("scenario"));
+    // int n_scenario = Integer.parseInt(parameters.get("scenario"));
 
     // Get data from the db
     HashMap<String, Condition> scanFilter = new HashMap<String, Condition>();
@@ -205,13 +210,13 @@ public class LoadBalancer {
             .withAttributeValueList(new AttributeValue().withN(Integer.toString(world))));
 
     ScanResult result = getDynamoDB("FoxesAndRabbits", scanFilter);
-    System.out.println("Result: " + result);
+    log("Result: " + result);
 
     Float instructionsPerGeneration =
         Float.parseFloat(result.getItems().get(0).get("instructionsPerGeneration").getN());
 
     Integer instructions = Math.round(instructionsPerGeneration * n_generations);
-    System.out.println("Instructions (estimate): " + instructions);
+    log("Instructions (estimate): " + instructions);
 
     return instructions;
   }
@@ -245,7 +250,7 @@ public class LoadBalancer {
             .withAttributeValueList(new AttributeValue(format)));
 
     ScanResult result = getDynamoDB("ImageCompression", scanFilter);
-    System.out.println("Result: " + result);
+    log("Result: " + result);
 
     Float instructionsPerImageSizePerCompressionFactor =
         Float.parseFloat(
@@ -254,7 +259,7 @@ public class LoadBalancer {
     Integer instructions =
         Math.round(
             instructionsPerImageSizePerCompressionFactor * width * height * compressionFactor);
-    System.out.println("Instructions (estimate): " + instructions);
+    log("Instructions (estimate): " + instructions);
 
     return instructions;
   }
@@ -268,14 +273,14 @@ public class LoadBalancer {
     HashMap<String, Condition> scanFilter = new HashMap<String, Condition>();
 
     ScanResult result = getDynamoDB("InsectWars", scanFilter);
-    System.out.println("Result: " + result);
+    log("Result: " + result);
 
     Float instructionsPerRoundPerSizeTimesRatio =
         Float.parseFloat(
             result.getItems().get(0).get("instructionsPerRoundPerSizeTimesRatio").getN());
 
     Integer instructions = Math.round(instructionsPerRoundPerSizeTimesRatio * max * army1 * army2);
-    System.out.println("Instructions (estimate): " + instructions);
+    log("Instructions (estimate): " + instructions);
 
     return instructions;
   }
@@ -345,23 +350,25 @@ public class LoadBalancer {
 
       // Parsing request
       URI requestedUri = t.getRequestURI();
-      System.out.println("Request URI: " + requestedUri);
+      // log("Request URI: " + requestedUri);
       String query = requestedUri.getRawQuery();
-      System.out.println("Query: " + query);
+      // log("Query: " + query);
       Map<String, String> parameters = queryToMap(query);
-      System.out.println("Parameters: " + parameters);
+      log("Parameters: " + parameters);
 
       // Send request to (a) server
       String url =
-          "http://" + getInstanceURL(whereFrom, parameters) + ":8000/" + whereFrom + "?" + query;
-      System.out.println("URL: " + url);
+          "http://" + getInstanceURL(whereFrom, parameters) + ":8000" + requestedUri;
+      // String url =
+      //     "http://localhost:8001" + requestedUri;
+      log("URL: " + url);
       URL requestUrl = new URL(url);
       HttpURLConnection connection = (HttpURLConnection) requestUrl.openConnection();
       connection.setRequestMethod("GET");
 
       // Create response to client from response to server
       int responseCode = connection.getResponseCode();
-      System.out.println("Response Code: " + responseCode);
+      log("Response Code: " + responseCode);
 
       BufferedReader reader =
           new BufferedReader(new InputStreamReader(connection.getInputStream()));
@@ -374,7 +381,7 @@ public class LoadBalancer {
       }
       reader.close();
 
-      System.out.println("Response Body:\n" + response.toString());
+      log("Response Body:\n" + response.toString());
 
       connection.disconnect();
 
@@ -409,6 +416,8 @@ public class LoadBalancer {
         // Result syntax:
         // targetFormat:<targetFormat>;compressionFactor:<factor>;data:image/<currentFormat>;base64,<encoded
         // image>
+
+        // Get the data and send it for analyzing (local)
         String result =
             new BufferedReader(new InputStreamReader(stream))
                 .lines()
@@ -422,32 +431,41 @@ public class LoadBalancer {
         params.put("targetFormat", targetFormat);
         params.put("compressionFactor", compressionFactor);
         params.put("image", resultSplits[1]);
-        getInstanceURL(whereFrom, params);
 
-        String output =
-            String.format(
-                "data:image/%s;base64,%s",
-                targetFormat,
-                handleRequest(resultSplits[1], targetFormat, Float.parseFloat(compressionFactor)));
-        t.sendResponseHeaders(200, output.length());
+        // Send request to (a) server
+        String url =
+            "http://" + getInstanceURL(whereFrom, parameters) + ":8000/compressimage";
+        // String url =
+        //   "http://localhost:8001/compressimage";
+        log("URL: " + url);
+        URL requestUrl = new URL(url);
+        HttpURLConnection connection = (HttpURLConnection) requestUrl.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setDoOutput(true);
+
+        try (DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream())) {
+            outputStream.writeBytes(result);
+            outputStream.flush();
+        }
+
+        // Create response to client from response to server
+        int responseCode = connection.getResponseCode();
+        log("Response Code: " + responseCode);
+
+        // Read response
+        StringBuilder response = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
+          String line;
+          while ((line = reader.readLine()) != null) {
+            response.append(line);
+          }
+        }
+
+        t.sendResponseHeaders(responseCode, response.length());
         OutputStream os = t.getResponseBody();
-        os.write(output.getBytes());
+        os.write(response.toString().getBytes());
         os.close();
       }
-    }
-
-    private String handleRequest(String inputEncoded, String format, float compressionFactor) {
-      byte[] decoded = Base64.getDecoder().decode(inputEncoded);
-      // try {
-      // ByteArrayInputStream bais = new ByteArrayInputStream(decoded);
-      // BufferedImage bi = ImageIO.read(bais);
-      // byte[] resultImage = process(bi, format, compressionFactor);
-      // byte[] outputEncoded = Base64.getEncoder().encode(resultImage);
-      // return new String(outputEncoded);
-      return "";
-      // } catch (IOException e) {
-      // return e.toString();
-      // }
     }
   }
 

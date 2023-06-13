@@ -74,6 +74,10 @@ public class AutoScaler {
     AMI_ID = result.getImages().get(0).getImageId();
   }
 
+  public void log(String toPrint) {
+    System.out.println(String.format("[%s] %s", this.getClass().getSimpleName(), toPrint));
+  }
+
   private Set<Instance> getInstances() throws Exception {
     Set<Instance> instances = new HashSet<Instance>();
     for (Reservation reservation : ec2.describeInstances().getReservations()) {
@@ -84,7 +88,7 @@ public class AutoScaler {
 
   private void startNewInstance() {
     try {
-      System.out.println("Starting a new instance.");
+      log("Starting a new instance.");
       RunInstancesRequest runInstancesRequest = new RunInstancesRequest();
       runInstancesRequest
           .withImageId(AMI_ID)
@@ -96,10 +100,10 @@ public class AutoScaler {
       RunInstancesResult runInstancesResult = ec2.runInstances(runInstancesRequest);
 
     } catch (AmazonServiceException ase) {
-      System.out.println("Caught Exception: " + ase.getMessage());
-      System.out.println("Reponse Status Code: " + ase.getStatusCode());
-      System.out.println("Error Code: " + ase.getErrorCode());
-      System.out.println("Request ID: " + ase.getRequestId());
+      log("Caught Exception: " + ase.getMessage());
+      log("Reponse Status Code: " + ase.getStatusCode());
+      log("Error Code: " + ase.getErrorCode());
+      log("Request ID: " + ase.getRequestId());
     }
   }
 
@@ -109,16 +113,16 @@ public class AutoScaler {
         () -> {
           try {
             String instanceId = instance.getInstanceId();
-            System.out.println("Stopping instance " + instanceId);
+            log("Stopping instance " + instanceId);
             TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
             termInstanceReq.withInstanceIds(instanceId);
             ec2.terminateInstances(termInstanceReq);
 
           } catch (AmazonServiceException ase) {
-            System.out.println("Caught Exception: " + ase.getMessage());
-            System.out.println("Reponse Status Code: " + ase.getStatusCode());
-            System.out.println("Error Code: " + ase.getErrorCode());
-            System.out.println("Request ID: " + ase.getRequestId());
+            log("Caught Exception: " + ase.getMessage());
+            log("Reponse Status Code: " + ase.getStatusCode());
+            log("Error Code: " + ase.getErrorCode());
+            log("Request ID: " + ase.getRequestId());
           }
         };
 
@@ -141,9 +145,9 @@ public class AutoScaler {
       int instanceAvailableCountLocal = 0;
       boolean pendingInstances = false;
 
-      System.out.println("===========================================");
-      System.out.println("Checking data...");
-      System.out.println("===========================================");
+      log("===========================================");
+      log("Checking data...");
+      log("===========================================");
 
       Set<Instance> instances = getInstances();
 
@@ -160,7 +164,7 @@ public class AutoScaler {
           pendingInstances = true;
 
         } else if (state.equals("running") && amiid.equals(AMI_ID)) {
-          System.out.println("running instance id = " + iid);
+          log("running instance id = " + iid);
 
           instanceDimension.setValue(iid);
           GetMetricStatisticsRequest request =
@@ -184,8 +188,8 @@ public class AutoScaler {
           // instanceStatus.getInstanceStatus().getDetails().get(0);
           String systemStatus = instanceStatus.getSystemStatus().getStatus();
           // String instanceStatusCheck = statusDetails.getStatus();
-          System.out.println("System Status Check: " + systemStatus);
-          // System.out.println("Instance Status Check: " + instanceStatusCheck);
+          log("System Status Check: " + systemStatus);
+          // log("Instance Status Check: " + instanceStatusCheck);
 
           // Because an instance may be running, but still be initializing
           instanceCountLocal++;
@@ -201,14 +205,14 @@ public class AutoScaler {
               // instanceUsage.put(instance, cpuUtil);
               instanceUsage.compute(instance, (k, v) -> cpuUtil);
 
-              System.out.println(
+              log(
                   "\tLAST CPU utilization for instance "
                   + iid
                   + " = "
                   + datapoints.get(datapoints.size() - 1).getAverage());
             }
             // for (Datapoint dp : datapoints) {
-            //   System.out.println(" CPU utilization for instance " + iid + " = " + dp.getAverage());
+            //   log(" CPU utilization for instance " + iid + " = " + dp.getAverage());
             // }
           }
         }
@@ -217,20 +221,20 @@ public class AutoScaler {
       instanceCount.set(instanceCountLocal);
       instanceAvailableCount.set(instanceAvailableCountLocal);
 
-      System.out.println("-------------------------------------------");
-      System.out.println(String.format("Number of instances: %d", instanceCountLocal));
-      System.out.println(
+      log("-------------------------------------------");
+      log(String.format("Number of instances: %d", instanceCountLocal));
+      log(
           String.format("Number of ready instances: %d", instanceAvailableCountLocal));
 
-      System.out.println("Usage of instances:");
+      log("Usage of instances:");
       for (Map.Entry<Instance, Double> entry : instanceUsage.entrySet()) {
-        System.out.println(
+        log(
             String.format("Instance %s: %s%%", entry.getKey().getInstanceId(), entry.getValue()));
       }
 
       if (instanceCountLocal == 0) {
         if (pendingInstances) {
-          System.out.println("There are pending instances. Waiting...");
+          log("There are pending instances. Waiting...");
         } else {
           startNewInstance();
         }
@@ -238,17 +242,17 @@ public class AutoScaler {
       }
 
       avgCPU /= (double)instanceAvailableCountLocal;
-      System.out.println("Average CPU utilization = " + avgCPU);
+      log("Average CPU utilization = " + avgCPU);
 
-      System.out.println("-------------------------------------------");
+      log("-------------------------------------------");
 
       if (avgCPU < MIN_CPU_USAGE) {
-        System.out.println(String.format("Average CPU utilization is under %d%%", MIN_CPU_USAGE));
+        log(String.format("Average CPU utilization is under %d%%", MIN_CPU_USAGE));
         if (instanceCountLocal == 1) {
-          System.out.println("Only one instance running. Cannot stop.");
+          log("Only one instance running. Cannot stop.");
           return;
         }
-        System.out.println("Stopping an instance.");
+        log("Stopping an instance.");
 
         // Stop the instance with the lowest CPU utilization
         Instance instanceWithMinUsage =
@@ -257,19 +261,19 @@ public class AutoScaler {
                 .map(ConcurrentHashMap.Entry::getKey)
                 .orElse(null);
 
-        System.out.println("Stopping instance " + instanceWithMinUsage.getInstanceId());
+        log("Stopping instance " + instanceWithMinUsage.getInstanceId());
         stopInstance(instanceWithMinUsage);
 
       } else if (avgCPU > 80) {
-        System.out.println(String.format("Average CPU utilization is over %d%%", MAX_CPU_USAGE));
+        log(String.format("Average CPU utilization is over %d%%", MAX_CPU_USAGE));
         startNewInstance();
       }
 
     } catch (AmazonServiceException ase) {
-      System.out.println("Caught Exception: " + ase.getMessage());
-      System.out.println("Reponse Status Code: " + ase.getStatusCode());
-      System.out.println("Error Code: " + ase.getErrorCode());
-      System.out.println("Request ID: " + ase.getRequestId());
+      log("Caught Exception: " + ase.getMessage());
+      log("Reponse Status Code: " + ase.getStatusCode());
+      log("Error Code: " + ase.getErrorCode());
+      log("Request ID: " + ase.getRequestId());
     } catch (Exception e) {
       e.printStackTrace();
     }
