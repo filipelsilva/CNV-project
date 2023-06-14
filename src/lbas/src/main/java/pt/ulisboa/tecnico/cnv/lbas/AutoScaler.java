@@ -87,25 +87,23 @@ public class AutoScaler {
   }
 
   private void startNewInstance() {
-    return;
-    // try {
-    //   log("Starting a new instance.");
-    //   RunInstancesRequest runInstancesRequest = new RunInstancesRequest();
-    //   runInstancesRequest
-    //       .withImageId(AMI_ID)
-    //       .withInstanceType("t2.micro")
-    //       .withMinCount(1)
-    //       .withMaxCount(1)
-    //       .withKeyName(KEY_NAME)
-    //       .withSecurityGroupIds(SEC_GROUP_ID);
-    //   RunInstancesResult runInstancesResult = ec2.runInstances(runInstancesRequest);
+    try {
+      log("Starting a new instance.");
+      RunInstancesRequest runInstancesRequest = new RunInstancesRequest();
+      runInstancesRequest
+          .withImageId(AMI_ID)
+          .withInstanceType("t2.micro")
+          .withMinCount(1)
+          .withMaxCount(1)
+          .withKeyName(KEY_NAME)
+          .withSecurityGroupIds(SEC_GROUP_ID);
 
-    // } catch (AmazonServiceException ase) {
-    //   log("Caught Exception: " + ase.getMessage());
-    //   log("Reponse Status Code: " + ase.getStatusCode());
-    //   log("Error Code: " + ase.getErrorCode());
-    //   log("Request ID: " + ase.getRequestId());
-    // }
+    } catch (AmazonServiceException ase) {
+      log("Caught Exception: " + ase.getMessage());
+      log("Reponse Status Code: " + ase.getStatusCode());
+      log("Error Code: " + ase.getErrorCode());
+      log("Request ID: " + ase.getRequestId());
+    }
   }
 
   private void stopInstance(Instance instance) {
