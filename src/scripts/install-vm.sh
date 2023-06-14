@@ -31,7 +31,7 @@ fi
 
 # Setup the webserver to start at boot.
 if [ "$1" = "webserver" ]; then
-	java_cmd="cd /home/ec2-user && source config.sh && java -cp webserver-1.0.0-SNAPSHOT-jar-with-dependencies.jar -Xbootclasspath/a:webserver-1.0.0-SNAPSHOT-jar-with-dependencies.jar,JavassistWrapper-1.0-jar-with-dependencies.jar -javaagent:JavassistWrapper-1.0-jar-with-dependencies.jar=ICount:pt.ulisboa.tecnico.cnv,javax.imageio:output pt.ulisboa.tecnico.cnv.webserver.WebServer"
+	java_cmd="cd /home/ec2-user && source config.sh && java -cp webserver-1.0.0-SNAPSHOT-jar-with-dependencies.jar -Xbootclasspath/a:/JavassistWrapper-1.0-jar-with-dependencies.jar -javaagent:JavassistWrapper-1.0-jar-with-dependencies.jar=ICount:pt.ulisboa.tecnico.cnv,javax.imageio:output pt.ulisboa.tecnico.cnv.webserver.WebServer"
 else
 	java_cmd="cd /home/ec2-user && source config.sh && java -cp LBAS-1.0-jar-with-dependencies.jar pt.ulisboa.tecnico.cnv.lbas.LBAS"
 fi
