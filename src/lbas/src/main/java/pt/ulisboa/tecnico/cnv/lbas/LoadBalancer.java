@@ -174,7 +174,7 @@ public class LoadBalancer {
     try {
       ScanRequest scanRequest = new ScanRequest(tableName).withScanFilter(scanFilter);
       ScanResult scanResult = dynamoDBClient.scan(scanRequest);
-      log("Result: " + scanResult);
+      log("Query result: " + scanResult);
       return scanResult;
 
     } catch (AmazonServiceException ase) {
@@ -309,7 +309,7 @@ public class LoadBalancer {
     int instanceAvailableCountLocal = instanceAvailableCount.get();
 
     if (instanceAvailableCountLocal < instanceCountLocal) {
-      // TODO run a lambda
+      return "lambda";
     }
 
     List<Instance> instancesSorted = new ArrayList<>(instanceUsage.keySet());
@@ -358,35 +358,47 @@ public class LoadBalancer {
       log("Parameters: " + parameters);
 
       // Send request to (a) server
+      int responseCode;
+      String response;
       String server = getInstanceURL(whereFrom, parameters);
       if (server == null) {
         return;
-      }
-      String url = "http://" + server + ":8000" + requestedUri;
-      // String url = "http://localhost:8001" + requestedUri;
-      log("URL: " + url);
-      URL requestUrl = new URL(url);
-      HttpURLConnection connection = (HttpURLConnection) requestUrl.openConnection();
-      connection.setRequestMethod("GET");
 
-      // Create response to client from response to server
-      int responseCode = connection.getResponseCode();
-      log("Response Code: " + responseCode);
+      } else if (server.equals("lambda")) {
+        System.out.println("Running lambda");
+        String json = lambdaConnector.payloadGenerator(parameters);
+        responseCode = 200;
+        response = lambdaConnector.invokeFunction(whereFrom, json);
 
-      BufferedReader reader =
+      } else {
+        String url = "http://" + server + ":8000" + requestedUri;
+        // String url = "http://localhost:8001" + requestedUri;
+        log("URL: " + url);
+        URL requestUrl = new URL(url);
+        HttpURLConnection connection = (HttpURLConnection) requestUrl.openConnection();
+        connection.setRequestMethod("GET");
+
+        // Create response to client from response to server
+        responseCode = connection.getResponseCode();
+        log("Response Code: " + responseCode);
+
+        BufferedReader reader =
           new BufferedReader(new InputStreamReader(connection.getInputStream()));
 
-      String line;
-      StringBuilder response = new StringBuilder();
+        String line;
+        StringBuilder responseBuilder = new StringBuilder();
 
-      while ((line = reader.readLine()) != null) {
-        response.append(line);
+        while ((line = reader.readLine()) != null) {
+          responseBuilder.append(line);
+        }
+        reader.close();
+
+        response = responseBuilder.toString();
+
+        connection.disconnect();
       }
-      reader.close();
 
-      log("Response Body:\n" + response.toString());
-
-      connection.disconnect();
+      log("Response Body:\n" + response);
 
       // Send response back to client
       t.sendResponseHeaders(responseCode, response.length());
@@ -436,34 +448,47 @@ public class LoadBalancer {
         parameters.put("body", resultSplits[1]);
 
         // Send request to (a) server
+        int responseCode;
+        String response;
         String server = getInstanceURL(whereFrom, parameters);
         if (server == null) {
           return;
-        }
-        String url = "http://" + server + ":8000/compressimage";
-        // String url = "http://localhost:8001/compressimage";
-        log("URL: " + url);
-        URL requestUrl = new URL(url);
-        HttpURLConnection connection = (HttpURLConnection) requestUrl.openConnection();
-        connection.setRequestMethod("POST");
-        connection.setDoOutput(true);
 
-        try (DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream())) {
+        } else if (server.equals("lambda")) {
+          System.out.println("Running lambda");
+          String json = lambdaConnector.payloadGenerator(parameters);
+          responseCode = 200;
+          response = lambdaConnector.invokeFunction(whereFrom, json);
+
+        } else {
+          String url = "http://" + server + ":8000/compressimage";
+          // String url = "http://localhost:8001/compressimage";
+          log("URL: " + url);
+          URL requestUrl = new URL(url);
+          HttpURLConnection connection = (HttpURLConnection) requestUrl.openConnection();
+          connection.setRequestMethod("POST");
+          connection.setDoOutput(true);
+
+          try (DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream())) {
             outputStream.writeBytes(result);
             outputStream.flush();
-        }
-
-        // Create response to client from response to server
-        int responseCode = connection.getResponseCode();
-        log("Response Code: " + responseCode);
-
-        // Read response
-        StringBuilder response = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
-          String line;
-          while ((line = reader.readLine()) != null) {
-            response.append(line);
           }
+
+          // Create response to client from response to server
+          responseCode = connection.getResponseCode();
+          log("Response Code: " + responseCode);
+
+          // Read response
+          StringBuilder responseBuilder = new StringBuilder();
+          try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+              responseBuilder.append(line);
+            }
+          }
+          response = responseBuilder.toString();
+
+          connection.disconnect();
         }
 
         t.sendResponseHeaders(responseCode, response.length());

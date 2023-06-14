@@ -4,7 +4,7 @@ source config.sh
 
 aws lambda delete-function --function-name CNV-ImageCompression
 aws lambda delete-function --function-name CNV-FoxesAndRabbits
-aws lambda delete-function --function-name CNV-InsectWar
+aws lambda delete-function --function-name CNV-InsectWars
 
 aws iam detach-role-policy \
         --role-name lambda-role \

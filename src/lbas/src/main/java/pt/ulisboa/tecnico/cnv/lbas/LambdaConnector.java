@@ -17,10 +17,18 @@ public class LambdaConnector {
             .build();
 
   public String payloadGenerator(Map<String, String> parameters) {
-    return "";
+    String ret = "{";
+
+    for (Map.Entry<String, String> entry : parameters.entrySet()) {
+      ret += "\"" + entry.getKey() + "\":\"" + entry.getValue() + "\",";
+    }
+    ret = ret.substring(0, ret.length() - 1) + "}";
+
+    System.out.println(ret);
+    return ret;
   }
 
-  public void invokeFunction(String functionName, String json) {
+  public String invokeFunction(String functionName, String json) {
     try {
       SdkBytes payload = SdkBytes.fromUtf8String(json);
 
@@ -30,11 +38,13 @@ public class LambdaConnector {
       InvokeResponse res = awsLambda.invoke(request);
       String value = res.payload().asUtf8String();
       System.out.println(value);
+      return value;
 
     } catch (LambdaException e) {
       System.err.println(e.getMessage());
       System.exit(1);
     }
+    return null;
   }
 
   public void close() {
