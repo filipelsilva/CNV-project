@@ -52,14 +52,6 @@ public class LoadBalancer {
     this.instanceAvailableCount = instanceAvailableCount;
   }
 
-  public void log(String toPrint) {
-    System.out.println(String.format("[%s] %s", this.getClass().getSimpleName(), toPrint));
-  }
-
-  public Instance selectRandomInstance() {
-    return instanceUsage.keySet().stream().findAny().get();
-  }
-
   public void serveForever() {
     HttpServer server;
     try {
@@ -73,6 +65,57 @@ public class LoadBalancer {
     } catch (IOException e) {
       e.printStackTrace();
     }
+  }
+
+  public void log(String toPrint) {
+    System.out.println(String.format("[%s] %s", this.getClass().getSimpleName(), toPrint));
+  }
+
+  public Instance selectRandomInstance() {
+    return instanceUsage.keySet().stream().findAny().get();
+  }
+
+  public String getInstanceURL(String type, Map<String, String> parameters) {
+    Integer instructions = 0;
+    switch (type) {
+      case "FoxesAndRabbits":
+        instructions = getInstructionsFoxesAndRabbits(parameters);
+        break;
+      case "ImageCompression":
+        instructions = getInstructionsImageCompression(parameters);
+        break;
+      case "InsectWars":
+        instructions = getInstructionsInsectWars(parameters);
+        break;
+      default:
+        return null;
+    }
+    return chooseInstance(instructions);
+  }
+
+  private String chooseInstance(Integer instructions) {
+    int instanceCountLocal = instanceCount.get();
+    int instanceAvailableCountLocal = instanceAvailableCount.get();
+
+    if (instanceAvailableCountLocal < instanceCountLocal) {
+      return "lambda";
+    }
+
+    List<Instance> instancesSorted = new ArrayList<>(instanceUsage.keySet());
+    Collections.sort(instancesSorted, Comparator.comparingDouble(instanceUsage::get));
+
+    // Do a round robin on the instances, sorted by cpu usage so that the first ones
+    // are the ones with the lowest usage
+    int size = instancesSorted.size();
+    if (lastSize != size) {
+      counter = 0;
+      lastSize = size;
+    } else {
+      counter++;
+      counter %= size;
+    }
+
+    return instancesSorted.get(counter).getPublicIpAddress();
   }
 
   public Map<String, String> queryToMap(String query) {
@@ -179,49 +222,6 @@ public class LoadBalancer {
     log("Instructions (estimate): " + instructions);
 
     return instructions;
-  }
-
-  public String getInstanceURL(String type, Map<String, String> parameters) {
-    Integer instructions = 0;
-    switch (type) {
-      case "FoxesAndRabbits":
-        instructions = getInstructionsFoxesAndRabbits(parameters);
-        break;
-      case "ImageCompression":
-        instructions = getInstructionsImageCompression(parameters);
-        break;
-      case "InsectWars":
-        instructions = getInstructionsInsectWars(parameters);
-        break;
-      default:
-        return null;
-    }
-    return chooseInstance(instructions);
-  }
-
-  private String chooseInstance(Integer instructions) {
-    int instanceCountLocal = instanceCount.get();
-    int instanceAvailableCountLocal = instanceAvailableCount.get();
-
-    if (instanceAvailableCountLocal < instanceCountLocal) {
-      return "lambda";
-    }
-
-    List<Instance> instancesSorted = new ArrayList<>(instanceUsage.keySet());
-    Collections.sort(instancesSorted, Comparator.comparingDouble(instanceUsage::get));
-
-    // Do a round robin on the instances, sorted by cpu usage so that the first ones
-    // are the ones with the lowest usage
-    int size = instancesSorted.size();
-    if (lastSize != size) {
-      counter = 0;
-      lastSize = size;
-    } else {
-      counter++;
-      counter %= size;
-    }
-
-    return instancesSorted.get(counter).getPublicIpAddress();
   }
 
   protected class GetHandler implements HttpHandler {
