@@ -18,7 +18,6 @@ import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceStatus;
 import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
-import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import java.util.ArrayList;
 import java.util.Date;
@@ -206,9 +205,9 @@ public class AutoScaler {
 
               log(
                   "\tLAST CPU utilization for instance "
-                  + iid
-                  + " = "
-                  + datapoints.get(datapoints.size() - 1).getAverage());
+                      + iid
+                      + " = "
+                      + datapoints.get(datapoints.size() - 1).getAverage());
             }
             // for (Datapoint dp : datapoints) {
             //   log(" CPU utilization for instance " + iid + " = " + dp.getAverage());
@@ -222,13 +221,11 @@ public class AutoScaler {
 
       log("-------------------------------------------");
       log(String.format("Number of instances: %d", instanceCountLocal));
-      log(
-          String.format("Number of ready instances: %d", instanceAvailableCountLocal));
+      log(String.format("Number of ready instances: %d", instanceAvailableCountLocal));
 
       log("Usage of instances:");
       for (Map.Entry<Instance, Double> entry : instanceUsage.entrySet()) {
-        log(
-            String.format("Instance %s: %s%%", entry.getKey().getInstanceId(), entry.getValue()));
+        log(String.format("Instance %s: %s%%", entry.getKey().getInstanceId(), entry.getValue()));
       }
 
       if (instanceCountLocal == 0) {
@@ -240,7 +237,7 @@ public class AutoScaler {
         return;
       }
 
-      avgCPU /= (double)instanceAvailableCountLocal;
+      avgCPU /= (double) instanceAvailableCountLocal;
       log("Average CPU utilization = " + avgCPU);
 
       log("-------------------------------------------");

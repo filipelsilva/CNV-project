@@ -278,7 +278,7 @@ public class LoadBalancer {
         log("Response Code: " + responseCode);
 
         BufferedReader reader =
-          new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            new BufferedReader(new InputStreamReader(connection.getInputStream()));
 
         String line;
         StringBuilder responseBuilder = new StringBuilder();
@@ -375,7 +375,8 @@ public class LoadBalancer {
 
           // Read response
           StringBuilder responseBuilder = new StringBuilder();
-          try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
+          try (BufferedReader reader =
+              new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
             String line;
             while ((line = reader.readLine()) != null) {
               responseBuilder.append(line);

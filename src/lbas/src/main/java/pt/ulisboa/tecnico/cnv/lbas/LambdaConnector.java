@@ -1,7 +1,6 @@
 package pt.ulisboa.tecnico.cnv.lbas;
 
 import java.util.Map;
-
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.lambda.LambdaClient;
@@ -12,9 +11,9 @@ import software.amazon.awssdk.services.lambda.model.LambdaException;
 public class LambdaConnector {
 
   private LambdaClient awsLambda =
-        LambdaClient.builder()
-            .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
-            .build();
+      LambdaClient.builder()
+          .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
+          .build();
 
   public String payloadGenerator(Map<String, String> parameters) {
     String ret = "{";
