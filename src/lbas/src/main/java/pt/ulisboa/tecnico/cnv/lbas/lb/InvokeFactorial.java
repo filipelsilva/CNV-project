@@ -28,7 +28,7 @@ public class InvokeFactorial {
   }
 
   public static void main(String[] args) {
-    String functionName = "eg-lambda";
+    String functionName = "CNV-test";
     LambdaClient awsLambda =
         LambdaClient.builder()
             .credentialsProvider(EnvironmentVariableCredentialsProvider.create())

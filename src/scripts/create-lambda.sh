@@ -17,5 +17,4 @@ aws lambda create-function \
         --runtime java11 \
         --timeout 5 \
         --memory-size 256 \
-        --role arn:aws:iam::$AWS_ACCOUNT_ID:role/lambda-role \
-        --region us-east-1
+        --role arn:aws:iam::$AWS_ACCOUNT_ID:role/lambda-role
