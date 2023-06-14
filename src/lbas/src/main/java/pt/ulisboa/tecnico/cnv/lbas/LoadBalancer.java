@@ -53,6 +53,8 @@ public class LoadBalancer {
           .withCredentials(new EnvironmentVariableCredentialsProvider())
           .withRegion(AWS_REGION)
           .build();
+  private LambdaConnector lambdaConnector = new LambdaConnector();
+
 
   private ConcurrentHashMap<Instance, Double> instanceUsage;
   private AtomicInteger instanceCount;
