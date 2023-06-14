@@ -11,9 +11,27 @@ aws iam attach-role-policy \
         --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
 aws lambda create-function \
-        --function-name CNV-test \
-        --zip-file fileb://$DIR/../lbas/target/LBAS-1.0-jar-with-dependencies.jar \
-        --handler pt.ulisboa.tecnico.cnv.lbas.lb.Handler::handleRequest \
+        --function-name CNV-ImageCompression \
+        --zip-file fileb://$DIR/../webserver/webserver/target/webserver-1.0.0-SNAPSHOT-jar-with-dependencies.jar \
+        --handler pt.ulisboa.tecnico.cnv.compression.BaseCompressingHandler::handleRequest \
+        --runtime java11 \
+        --timeout 5 \
+        --memory-size 256 \
+        --role arn:aws:iam::$AWS_ACCOUNT_ID:role/lambda-role
+
+aws lambda create-function \
+        --function-name CNV-FoxesAndRabbits \
+        --zip-file fileb://$DIR/../webserver/webserver/target/webserver-1.0.0-SNAPSHOT-jar-with-dependencies.jar \
+        --handler pt.ulisboa.tecnico.cnv.foxes-rabbits.SimulationHandler::handleRequest \
+        --runtime java11 \
+        --timeout 5 \
+        --memory-size 256 \
+        --role arn:aws:iam::$AWS_ACCOUNT_ID:role/lambda-role
+
+aws lambda create-function \
+        --function-name CNV-InsectWar \
+        --zip-file fileb://$DIR/../webserver/webserver/target/webserver-1.0.0-SNAPSHOT-jar-with-dependencies.jar \
+        --handler pt.ulisboa.tecnico.cnv.insect-war.WarSimulationHandler::handleRequest \
         --runtime java11 \
         --timeout 5 \
         --memory-size 256 \
