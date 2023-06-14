@@ -103,6 +103,9 @@ public class ICount extends CodeDumper {
             "[%s Image Compression] Number of instructions ran is %s",
             ICount.class.getSimpleName(), getThreadInfo(threadID)));
 
+    if (compressionQuality == 0) {
+      compressionQuality = 1;
+    }
     Float instructionsPerImageSizePerCompressionFactor =
         (float) getThreadInfo(threadID)
             / ((float) (bi.getWidth() * bi.getHeight()) * compressionQuality);
@@ -141,6 +144,9 @@ public class ICount extends CodeDumper {
             "[%s Foxes And Rabbits] Number of instructions ran is %s",
             ICount.class.getSimpleName(), getThreadInfo(threadID)));
 
+    if (n_generations == 0) {
+      n_generations = 1;
+    }
     Float instructionsPerGeneration = (float) getThreadInfo(threadID) / (float) n_generations;
 
     // Update local cache map with info
@@ -179,8 +185,11 @@ public class ICount extends CodeDumper {
     if (sz1 > sz2) {
       ratio = (float) sz2 / (float) sz1;
     }
-    Float instructionsPerRoundPerSizeTimesRatio =
-        (float) getThreadInfo(threadID) / (float) (max * (sz1 + sz2) * ratio);
+    if (ratio == 0) {
+      ratio = 0.1f;
+    }
+    Float instructionsPerRoundPerSizeTimesRatio = 5_000 *
+        (float) getThreadInfo(threadID) / ((float)max * (float)(sz1 + sz2) * ratio);
 
     // Update local cache map with info
     if (InsectWarsCache == null) {

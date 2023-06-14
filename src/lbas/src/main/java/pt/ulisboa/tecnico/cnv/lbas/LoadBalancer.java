@@ -97,7 +97,7 @@ public class LoadBalancer {
     int instanceCountLocal = instanceCount.get();
     int instanceAvailableCountLocal = instanceAvailableCount.get();
 
-    if (instanceAvailableCountLocal < instanceCountLocal) {
+    if (instanceAvailableCountLocal < instanceCountLocal || instanceAvailableCountLocal == 0) {
       return "lambda";
     }
 
@@ -216,9 +216,9 @@ public class LoadBalancer {
 
     Float instructionsPerRoundPerSizeTimesRatio =
         Float.parseFloat(
-            result.getItems().get(0).get("instructionsPerRoundPerSizeTimesRatio").getN());
+            result.getItems().get(result.getItems().size() - 1).get("instructionsPerRoundPerSizeTimesRatio").getN());
 
-    Integer instructions = Math.round(instructionsPerRoundPerSizeTimesRatio * max * army1 * army2);
+    Integer instructions = Math.round(instructionsPerRoundPerSizeTimesRatio * max * (army1 + army2));
     log("Instructions (estimate): " + instructions);
 
     return instructions;
