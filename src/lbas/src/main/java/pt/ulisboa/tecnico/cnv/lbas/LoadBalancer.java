@@ -34,8 +34,8 @@ import javax.imageio.ImageIO;
 
 public class LoadBalancer {
 
-  private DynamoDBGetter dynamoDBGetter = new DynamoDBGetter();
   private LambdaConnector lambdaConnector = new LambdaConnector();
+  private DynamoDBGetter dynamoDBGetter = new DynamoDBGetter();
 
   private ConcurrentHashMap<Instance, Double> instanceUsage;
   private AtomicInteger instanceCount;
@@ -263,7 +263,7 @@ public class LoadBalancer {
         System.out.println("Running lambda");
         String json = lambdaConnector.payloadGenerator(parameters);
         responseCode = 200;
-        response = lambdaConnector.invokeFunction(whereFrom, json);
+        response = lambdaConnector.invokeFunction("CNV-" + whereFrom, json);
 
       } else {
         String url = "http://" + server + ":8000" + requestedUri;
@@ -353,7 +353,7 @@ public class LoadBalancer {
           System.out.println("Running lambda");
           String json = lambdaConnector.payloadGenerator(parameters);
           responseCode = 200;
-          response = lambdaConnector.invokeFunction(whereFrom, json);
+          response = lambdaConnector.invokeFunction("CNV-" + whereFrom, json);
 
         } else {
           String url = "http://" + server + ":8000/compressimage";

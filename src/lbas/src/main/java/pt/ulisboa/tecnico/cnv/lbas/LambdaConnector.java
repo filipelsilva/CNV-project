@@ -3,6 +3,7 @@ package pt.ulisboa.tecnico.cnv.lbas;
 import java.util.Map;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.lambda.LambdaClient;
 import software.amazon.awssdk.services.lambda.model.InvokeRequest;
 import software.amazon.awssdk.services.lambda.model.InvokeResponse;
@@ -10,9 +11,11 @@ import software.amazon.awssdk.services.lambda.model.LambdaException;
 
 public class LambdaConnector {
 
+  private String AWS_REGION = "us-east-1";
   private LambdaClient awsLambda =
       LambdaClient.builder()
           .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
+          .region(Region.of(AWS_REGION))
           .build();
 
   public String payloadGenerator(Map<String, String> parameters) {
@@ -36,12 +39,10 @@ public class LambdaConnector {
 
       InvokeResponse res = awsLambda.invoke(request);
       String value = res.payload().asUtf8String();
-      System.out.println(value);
       return value;
 
     } catch (LambdaException e) {
       System.err.println(e.getMessage());
-      System.exit(1);
     }
     return null;
   }
