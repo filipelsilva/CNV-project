@@ -55,7 +55,6 @@ public class LoadBalancer {
           .build();
   private LambdaConnector lambdaConnector = new LambdaConnector();
 
-
   private ConcurrentHashMap<Instance, Double> instanceUsage;
   private AtomicInteger instanceCount;
   private AtomicInteger instanceAvailableCount;
@@ -224,7 +223,7 @@ public class LoadBalancer {
   }
 
   public Integer getInstructionsImageCompression(Map<String, String> parameters) {
-    String inputEncoded = parameters.get("image");
+    String inputEncoded = parameters.get("body");
     String format = parameters.get("format");
     Float compressionFactor = Float.parseFloat(parameters.get("compressionFactor"));
 
@@ -359,10 +358,12 @@ public class LoadBalancer {
       log("Parameters: " + parameters);
 
       // Send request to (a) server
-      String url =
-          "http://" + getInstanceURL(whereFrom, parameters) + ":8000" + requestedUri;
-      // String url =
-      //     "http://localhost:8001" + requestedUri;
+      String server = getInstanceURL(whereFrom, parameters);
+      if (server == null) {
+        return;
+      }
+      String url = "http://" + server + ":8000" + requestedUri;
+      // String url = "http://localhost:8001" + requestedUri;
       log("URL: " + url);
       URL requestUrl = new URL(url);
       HttpURLConnection connection = (HttpURLConnection) requestUrl.openConnection();
@@ -432,13 +433,15 @@ public class LoadBalancer {
         Map<String, String> parameters = new HashMap<>();
         parameters.put("targetFormat", targetFormat);
         parameters.put("compressionFactor", compressionFactor);
-        parameters.put("image", resultSplits[1]);
+        parameters.put("body", resultSplits[1]);
 
         // Send request to (a) server
-        String url =
-            "http://" + getInstanceURL(whereFrom, parameters) + ":8000/compressimage";
-        // String url =
-        //   "http://localhost:8001/compressimage";
+        String server = getInstanceURL(whereFrom, parameters);
+        if (server == null) {
+          return;
+        }
+        String url = "http://" + server + ":8000/compressimage";
+        // String url = "http://localhost:8001/compressimage";
         log("URL: " + url);
         URL requestUrl = new URL(url);
         HttpURLConnection connection = (HttpURLConnection) requestUrl.openConnection();

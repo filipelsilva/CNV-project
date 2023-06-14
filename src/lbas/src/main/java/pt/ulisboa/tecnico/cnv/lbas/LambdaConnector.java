@@ -1,5 +1,7 @@
 package pt.ulisboa.tecnico.cnv.lbas;
 
+import java.util.Map;
+
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.lambda.LambdaClient;
@@ -13,6 +15,10 @@ public class LambdaConnector {
         LambdaClient.builder()
             .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
             .build();
+
+  public String payloadGenerator(Map<String, String> parameters) {
+    return "";
+  }
 
   public void invokeFunction(String functionName, String json) {
     try {
