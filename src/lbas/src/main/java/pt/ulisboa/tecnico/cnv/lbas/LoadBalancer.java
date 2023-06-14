@@ -292,8 +292,7 @@ public class LoadBalancer {
 
         connection.disconnect();
       }
-
-      log("Response Body:\n" + response);
+      // log("Response Body:\n" + response);
 
       // Send response back to client
       t.sendResponseHeaders(responseCode, response.length());
@@ -386,6 +385,7 @@ public class LoadBalancer {
 
           connection.disconnect();
         }
+        // log("Response Body:\n" + response);
 
         t.sendResponseHeaders(responseCode, response.length());
         OutputStream os = t.getResponseBody();
