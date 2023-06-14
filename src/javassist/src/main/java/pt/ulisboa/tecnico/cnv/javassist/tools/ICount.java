@@ -18,7 +18,7 @@ public class ICount extends CodeDumper {
   private static Float InsectWarsCache = null;
 
   private static int worldFoxesRabbits = 0;
-  private static Map<Integer, Long> ninstsPerThread = new HashMap<>();
+  private static Map<Long, Long> ninstsPerThread = new HashMap<>();
   private static AmazonDynamoDBConnector dynamoDBConnector = new AmazonDynamoDBConnector();
 
   public ICount(List<String> packageNameList, String writeDestination) {
@@ -63,15 +63,16 @@ public class ICount extends CodeDumper {
     }
   }
 
-  public static Long getThreadInfo(int threadID) {
+  public static Long getThreadInfo(Long threadID) {
     return ninstsPerThread.get(threadID);
   }
 
-  public static void setThreadInfo(int position, int length, int threadID) {
+  public static void setThreadInfo(int position, int length) {
+    Long threadID = Thread.currentThread().getId();
     ninstsPerThread.put(threadID, ninstsPerThread.getOrDefault(threadID, 0L) + length);
   }
 
-  public static void clearThreadInfo(int threadID) {
+  public static void clearThreadInfo(Long threadID) {
     ninstsPerThread.remove(threadID);
   }
 
@@ -80,7 +81,8 @@ public class ICount extends CodeDumper {
   }
 
   public static void treatImageCompression(
-      BufferedImage bi, String targetFormat, float compressionQuality, int threadID) {
+      BufferedImage bi, String targetFormat, float compressionQuality) {
+    Long threadID = Thread.currentThread().getId();
     System.out.println(
         String.format(
             "[%s Image Compression] Image size is %sx%s",
@@ -122,7 +124,8 @@ public class ICount extends CodeDumper {
     clearThreadInfo(threadID);
   }
 
-  public static void treatFoxesAndRabbits(int n_generations, int threadID) {
+  public static void treatFoxesAndRabbits(int n_generations) {
+    Long threadID = Thread.currentThread().getId();
     System.out.println(
         String.format(
             "[%s Foxes And Rabbits] World is %s", ICount.class.getSimpleName(), worldFoxesRabbits));
@@ -156,7 +159,8 @@ public class ICount extends CodeDumper {
     clearThreadInfo(threadID);
   }
 
-  public static void treatInsectWars(int max, int sz1, int sz2, int threadID) {
+  public static void treatInsectWars(int max, int sz1, int sz2) {
+    Long threadID = Thread.currentThread().getId();
     System.out.println(
         String.format(
             "[%s Insect Wars] Max simulation rounds is %s", ICount.class.getSimpleName(), max));
@@ -199,24 +203,17 @@ public class ICount extends CodeDumper {
     switch (behavior.getName()) {
       case "process":
         behavior.insertAfter(
-            String.format(
-                "%s.treatImageCompression($1, $2, $3, %s);",
-                ICount.class.getName(), Thread.currentThread().getId()));
+            String.format("%s.treatImageCompression($1, $2, $3);", ICount.class.getName()));
         break;
       case "populate":
         behavior.insertAfter(String.format("%s.setWorldFoxesRabbits($1);", ICount.class.getName()));
         break;
       case "runSimulation":
-        behavior.insertAfter(
-            String.format(
-                "%s.treatFoxesAndRabbits($1, %s);",
-                ICount.class.getName(), Thread.currentThread().getId()));
+        behavior.insertAfter(String.format("%s.treatFoxesAndRabbits($1);", ICount.class.getName()));
         break;
       case "war":
         behavior.insertAfter(
-            String.format(
-                "%s.treatInsectWars($1, $2, $3, %s);",
-                ICount.class.getName(), Thread.currentThread().getId()));
+            String.format("%s.treatInsectWars($1, $2, $3);", ICount.class.getName()));
         break;
     }
   }
@@ -227,10 +224,7 @@ public class ICount extends CodeDumper {
     block.behavior.insertAt(
         block.line,
         String.format(
-            "%s.setThreadInfo(%s, %s, %s);",
-            ICount.class.getName(),
-            block.getPosition(),
-            block.getLength(),
-            Thread.currentThread().getId()));
+            "%s.setThreadInfo(%s, %s);",
+            ICount.class.getName(), block.getPosition(), block.getLength()));
   }
 }
