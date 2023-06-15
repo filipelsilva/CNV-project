@@ -96,6 +96,7 @@ public class AutoScaler {
           .withMaxCount(1)
           .withKeyName(KEY_NAME)
           .withSecurityGroupIds(SEC_GROUP_ID);
+      ec2.runInstances(runInstancesRequest);
 
     } catch (AmazonServiceException ase) {
       log("Caught Exception: " + ase.getMessage());
