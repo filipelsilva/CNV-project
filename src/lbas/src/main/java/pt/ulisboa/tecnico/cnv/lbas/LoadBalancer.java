@@ -38,6 +38,7 @@ public class LoadBalancer {
   private DynamoDBGetter dynamoDBGetter = new DynamoDBGetter();
 
   private ConcurrentHashMap<Instance, Double> instanceUsage;
+  private ConcurrentHashMap<Instance, Double> instanceInstructionsCount;
   private AtomicInteger instanceCount;
   private AtomicInteger instanceAvailableCount;
   private int counter = -1;
@@ -101,21 +102,67 @@ public class LoadBalancer {
       return "lambda";
     }
 
-    List<Instance> instancesSorted = new ArrayList<>(instanceUsage.keySet());
-    Collections.sort(instancesSorted, Comparator.comparingDouble(instanceUsage::get));
-
-    // Do a round robin on the instances, sorted by cpu usage so that the first ones
-    // are the ones with the lowest usage
-    int size = instancesSorted.size();
-    if (lastSize != size) {
-      counter = 0;
-      lastSize = size;
-    } else {
-      counter++;
-      counter %= size;
+    for (Instance instance : instanceUsage.keySet()) {
+      instanceInstructionsCount.putIfAbsent(instance, -1d);
+    }
+    for (Instance instance : instanceInstructionsCount.keySet()) {
+      if (!instanceUsage.containsKey(instance)) {
+        instanceInstructionsCount.remove(instance);
+      }
     }
 
-    return instancesSorted.get(counter).getPublicIpAddress();
+    // If more than half the instances have estimations of instructions, use them.
+    // Otherwise, go with a round-robin approach
+    int size = instanceUsage.size();
+    boolean hasEstimations = Collections.frequency(instanceInstructionsCount.values(), -1d) < size / 2;
+
+    for (Instance instance : instanceInstructionsCount.keySet()) {
+      if (!instanceUsage.containsKey(instance)) {
+        instanceInstructionsCount.remove(instance);
+      }
+    }
+
+    if (instructions == -1) {
+
+      // Do a round robin on the instances, sorted by cpu usage so that the first ones
+      // are the ones with the lowest usage
+
+      List<Instance> instancesSorted = new ArrayList<>(instanceUsage.keySet());
+      Collections.sort(instancesSorted, Comparator.comparingDouble(instanceUsage::get));
+      if (lastSize != size) {
+        counter = 0;
+        lastSize = size;
+      } else {
+        counter++;
+        counter %= size;
+      }
+      return instancesSorted.get(counter).getPublicIpAddress();
+
+    } else {
+
+      // Idea: sort the instances by number of instructions ran
+      // If a workload "fits" in an instance, use it
+      // This will compact the number of instances as much as possible
+
+      List<Instance> instancesSorted = new ArrayList<>(instanceInstructionsCount.keySet());
+      Collections.sort(instancesSorted, Comparator.comparingDouble(instanceInstructionsCount::get));
+      Collections.reverse(instancesSorted);
+
+      for (Instance instance : instancesSorted) {
+        double count = instanceInstructionsCount.get(instance);
+        double usage = instanceUsage.get(instance);
+
+        double estimation = instructions * usage / count;
+
+        if (estimation + usage < 100) {
+          instanceInstructionsCount.compute(instance, (k, v) -> v + estimation);
+          return instance.getPublicIpAddress();
+        }
+      }
+
+      // Unoptimal fallback
+      return instancesSorted.get(0).getPublicIpAddress();
+    }
   }
 
   public Map<String, String> queryToMap(String query) {
@@ -149,6 +196,10 @@ public class LoadBalancer {
             .withAttributeValueList(new AttributeValue().withN(Integer.toString(world))));
 
     ScanResult result = dynamoDBGetter.getDynamoDB("FoxesAndRabbits", scanFilter);
+    if (result.getItems().size() == 0) {
+      return -1;
+    }
+
     log("Result: " + result);
 
     Float instructionsPerGeneration =
@@ -189,6 +240,10 @@ public class LoadBalancer {
             .withAttributeValueList(new AttributeValue(format)));
 
     ScanResult result = dynamoDBGetter.getDynamoDB("ImageCompression", scanFilter);
+    if (result.getItems().size() == 0) {
+      return -1;
+    }
+
     log("Result: " + result);
 
     Float instructionsPerImageSizePerCompressionFactor =
@@ -212,6 +267,10 @@ public class LoadBalancer {
     HashMap<String, Condition> scanFilter = new HashMap<String, Condition>();
 
     ScanResult result = dynamoDBGetter.getDynamoDB("InsectWars", scanFilter);
+    if (result.getItems().size() == 0) {
+      return -1;
+    }
+
     log("Result: " + result);
 
     Float instructionsPerRoundPerSizeTimesRatio =
@@ -260,7 +319,7 @@ public class LoadBalancer {
         return;
 
       } else if (server.equals("lambda")) {
-        System.out.println("Running lambda");
+        log("Running lambda");
         String json = lambdaConnector.payloadGenerator(parameters);
         responseCode = 200;
         response = lambdaConnector.invokeFunction("CNV-" + whereFrom, json);
