@@ -261,7 +261,7 @@ public class AutoScaler {
         log("Stopping instance " + instanceWithMinUsage.getInstanceId());
         stopInstance(instanceWithMinUsage);
 
-      } else if (avgCPU > 80) {
+      } else if (avgCPU > MAX_CPU_USAGE) {
         log(String.format("Average CPU utilization is over %d%%", MAX_CPU_USAGE));
         startNewInstance();
       }

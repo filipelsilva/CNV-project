@@ -252,15 +252,37 @@ the system is still trying to scale up.
 
 \subsubsection{\textit{Auto Scaler}}
 
-% TODO
-Regarding the auto scaler, the metric we will keep in mind is the average CPU
-utilization of each node: if the system detects that more requests are being
-made and the CPU utilization is above a certain threshold, it will spawn a new
-node. Likewise, if the CPU utilization is below a certain threshold, it will
-destroy nodes, in order to keep the cost of running as low as possible. The
-algorithm will scale up by creating new nodes, and scale down by marking the
-nodes it wants to destroy for termination, however they can only be terminated
-once there are no more requests being served by them.
+The auto scaler's goal is to respond to higher and lower loads than usual,
+adding and removing instances as needed.
+
+The metric we need to keep in mind is the \textbf{average CPU utilization of all
+nodes}. Using this, we can define thresholds to scale up and down as needed.
+These are defined as follows:
+
+\begin{itemize}
+    \item \textit{MAX\_CPU\_USAGE} (default: 80\%)
+    \item \textit{MIN\_CPU\_USAGE} (default: 20\%)
+\end{itemize}
+
+Therefore, the auto scaler works as follows:
+
+\begin{enumerate}
+    \item Iterate over every instance that is running. If it is running and the
+        \textit{AMI\_ID} is the one for the image \textit{CNV-Webserver}, we get
+        its average CPU usage for the last 60 seconds.
+    \item Calculate the average CPU usage of all nodes.
+    \item Accordingly scale up or down:
+        \subitem If there are no instances, start a new one. However, if one is
+        in the \textit{pending} state, do not start a new one just yet.
+        \subitem If the average CPU usage is above \textit{MAX\_CPU\_USAGE}, we
+        start a new instance.
+        \subitem If the average CPU usage is under \textit{MIN\_CPU\_USAGE}, we
+        stop the instance with lowest CPU usage. However, it is not stopped
+        right there and then: it is marked for termination, and will only be
+        terminated after \textit{DELAY\_KILL} (default: 60) seconds. This is
+        because we want to make sure that the instance is not needed anymore, it
+        might still be running requests.
+\end{enumerate}
 
 \subsection{Scripts}
 
@@ -270,7 +292,9 @@ the first instance of this system - the \textit{LBAS}.
 Here are the scripts alongside a quick explanation for each:
 
 \begin{itemize}
-    \item \textit{config.sh} - keeps all the variables needed to contact AWS.
+    \item \textit{config.sh} - keeps all the variables needed to contact AWS. Is
+        created by the user but there exists a \textit{config.sh.example} that
+        acts as a template.
     \item \textit{create-image.sh} - creates the \textit{webserver} and \textit{LBAS}
         images. It is composed of three other scripts:
     \subitem \textit{install-vm.sh} - Installs the needed packages and programs
@@ -281,6 +305,9 @@ Here are the scripts alongside a quick explanation for each:
     \subitem \textit{test-vm.sh} - Tests that the instance is ready to go, using
         the \textit{/test} endpoint that is found in all programs used in this
         system.
+    \item \textit{create-lambda.sh} - creates the lambdas used in this system.
+    \item \textit{launch-deployment.sh} - creates all images, lambdas and
+        launches the entrypoint to the system (the \textit{LBAS} instance).
 \end{itemize}
 
 Each instance (and script) needs to source the script \textit{config.sh}, which
