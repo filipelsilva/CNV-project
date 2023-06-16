@@ -13,7 +13,7 @@ aws iam attach-role-policy \
 aws lambda create-function \
         --function-name CNV-ImageCompression \
         --zip-file fileb://$DIR/../webserver/webserver/target/webserver-1.0.0-SNAPSHOT-jar-with-dependencies.jar \
-        --handler pt.ulisboa.tecnico.cnv.compression.BaseCompressingHandler::handleRequest \
+        --handler pt.ulisboa.tecnico.cnv.compression.CompressImageHandlerImpl::handleRequest \
         --runtime java11 \
         --timeout 5 \
         --memory-size 256 \
