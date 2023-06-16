@@ -1,4 +1,4 @@
-package pt.ulisboa.tecnico.cnv.javassist;
+package pt.ulisboa.tecnico.cnv.webserver;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;

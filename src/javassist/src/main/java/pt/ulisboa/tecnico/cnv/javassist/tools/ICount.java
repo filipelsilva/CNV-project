@@ -1,13 +1,14 @@
 package pt.ulisboa.tecnico.cnv.javassist.tools;
 
 import java.awt.image.BufferedImage;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javassist.CannotCompileException;
 import javassist.CtBehavior;
-import pt.ulisboa.tecnico.cnv.javassist.AmazonDynamoDBConnector;
 
 public class ICount extends CodeDumper {
 
@@ -20,7 +21,6 @@ public class ICount extends CodeDumper {
 
   private static int worldFoxesRabbits = 0;
   private static Map<Long, Long> ninstsPerThread = new HashMap<>();
-  private static AmazonDynamoDBConnector dynamoDBConnector = new AmazonDynamoDBConnector();
 
   private static final Set<String> ignoredMethods =
       Set.of(
@@ -44,7 +44,7 @@ public class ICount extends CodeDumper {
     return counter;
   }
 
-  public static void incCounter() {
+    public static void incCounter() {
     counter += 1;
     System.out.println(
         String.format("[ICount] Incrementing counter: (%s/%s)...", counter, BATCH_SIZE));
@@ -53,27 +53,33 @@ public class ICount extends CodeDumper {
       // Reset counter
       counter = 0;
 
-      // Update data on dynamoDB
-      System.out.println("[ICount] Updating DynamoDB...");
+      // Update data on dynamoDB (indirectly; the report will explain this)
+      System.out.println("[ICount] Updating estimations...");
+      try {
+          FileWriter fileWriter = new FileWriter("/tmp/dynamodb");
 
-      System.out.println("[ICount] Updating DynamoDB FoxesAndRabbitsCache...");
-      for (Map.Entry<Integer, Float> entry : FoxesAndRabbitsCache.entrySet()) {
-        dynamoDBConnector.putItem(
-            "FoxesAndRabbits",
-            dynamoDBConnector.newItemFoxesAndRabbits(entry.getValue(), entry.getKey()));
-      }
+          System.out.println("[ICount] Updating FoxesAndRabbitsCache...");
+          for (Map.Entry<Integer, Float> entry : FoxesAndRabbitsCache.entrySet()) {
+              fileWriter.write(String.format("FoxesAndRabbits %s %s\n", entry.getKey(), entry.getValue()));
+          }
+      
+          System.out.println("[ICount] Updating ImageCompressionCache...");
+          for (Map.Entry<String, Float> entry : ImageCompressionCache.entrySet()) {
+              fileWriter.write(String.format("ImageCompression %s %s\n", entry.getKey(), entry.getValue()));
+          }
 
-      System.out.println("[ICount] Updating DynamoDB ImageCompressionCache...");
-      for (Map.Entry<String, Float> entry : ImageCompressionCache.entrySet()) {
-        dynamoDBConnector.putItem(
-            "ImageCompression",
-            dynamoDBConnector.newItemImageCompression(entry.getValue(), entry.getKey()));
-      }
+          System.out.println("[ICount] Updating InsectWarsCache...");
+          if (InsectWarsCache != null) {
+              fileWriter.write(String.format("InsectWars %s\n", InsectWarsCache));
+          }
 
-      System.out.println("[ICount] Updating DynamoDB InsectWarsCache...");
-      if (InsectWarsCache != null) {
-        dynamoDBConnector.putItem(
-            "InsectWars", dynamoDBConnector.newItemInsectWars(InsectWarsCache));
+          System.out.println("[ICount] Updated estimations.");
+
+          // Close the file writer
+          fileWriter.close();
+
+      } catch (IOException e) {
+          System.out.println("An error occurred while writing to the file: " + e.getMessage());
       }
     }
   }

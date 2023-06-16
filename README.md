@@ -22,8 +22,3 @@ for further usage in the deployment.
 `./destroy-lambda.sh` will delete them.
 
 7. To launch the whole deployment, `./launch-vm.sh CNV-LBAS`
-
-# TODO
-
-[ ] Image bug in javassist/javax.io
-[ ] Lambda error with image

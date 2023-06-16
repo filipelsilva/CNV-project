@@ -12,6 +12,8 @@ public class LBAS {
   private static LoadBalancer loadBalancer;
 
   public static void main(String[] args) {
+    int DELAY_AUTOSCALER = 10;
+
     ConcurrentHashMap<Instance, Double> instances = new ConcurrentHashMap<>();
     AtomicInteger instanceCount = new AtomicInteger(0);
     AtomicInteger instanceAvailableCount = new AtomicInteger(0);
@@ -25,7 +27,7 @@ public class LBAS {
         };
 
     // Run the autoscaler task every 30 seconds
-    executorService.scheduleAtFixedRate(autoscalerTask, 0, 10, TimeUnit.SECONDS);
+    executorService.scheduleAtFixedRate(autoscalerTask, 0, DELAY_AUTOSCALER, TimeUnit.SECONDS);
 
     // Run the load balancer forever
     loadBalancer.serveForever();
