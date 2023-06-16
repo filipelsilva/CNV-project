@@ -130,7 +130,7 @@ public class AutoScaler {
     instanceUsage.remove(instance);
 
     // After DELAY_KILL, kill the instance. This is to give it time to return to someone
-    executorService.scheduleAtFixedRate(autoscalerTask, DELAY_KILL, 0, TimeUnit.SECONDS);
+    executorService.schedule(autoscalerTask, DELAY_KILL, TimeUnit.SECONDS);
   }
 
   public void analyseInstances() {
