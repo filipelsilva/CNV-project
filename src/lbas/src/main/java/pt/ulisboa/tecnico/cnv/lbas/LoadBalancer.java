@@ -44,6 +44,11 @@ public class LoadBalancer {
   private int counter = -1;
   private int lastSize = 0;
 
+  private int dynamoDBCounter = -1;
+  private static Map<Integer, Float> FoxesAndRabbitsCache = new HashMap<>();
+  private static Map<String, Float> ImageCompressionCache = new HashMap<>();
+  private static Float InsectWarsCache = null;
+
   public LoadBalancer(
       ConcurrentHashMap<Instance, Double> instances,
       AtomicInteger instanceCount,
@@ -72,11 +77,44 @@ public class LoadBalancer {
     System.out.println(String.format("[%s] %s", this.getClass().getSimpleName(), toPrint));
   }
 
-  public Instance selectRandomInstance() {
-    return instanceUsage.keySet().stream().findAny().get();
+  private void updateDynamoDBCache() {
+    log("Updating DynamoDB Cache");
+    HashMap<String, Condition> scanFilter = new HashMap<String, Condition>();
+
+    ScanResult result = dynamoDBGetter.getDynamoDB("FoxesAndRabbits", scanFilter);
+    for (Map<String, AttributeValue> entry : result.getItems()) {
+      FoxesAndRabbitsCache.put(
+          Integer.parseInt(entry.get("world").getN()),
+          Float.parseFloat(entry.get("instructionsPerGeneration").getN()));
+    }
+
+    log("FoxesAndRabbitsCache: " + FoxesAndRabbitsCache);
+
+    result = dynamoDBGetter.getDynamoDB("InsectWars", scanFilter);
+    for (Map<String, AttributeValue> entry : result.getItems()) {
+      InsectWarsCache = Float.parseFloat(entry.get("instructionsPerRoundPerSizeTimesRatio").getN());
+    }
+
+    log("InsectWarsCache: " + InsectWarsCache);
+
+    result = dynamoDBGetter.getDynamoDB("ImageCompression", scanFilter);
+    for (Map<String, AttributeValue> entry : result.getItems()) {
+      ImageCompressionCache.put(
+          entry.get("format").getS(),
+          Float.parseFloat(entry.get("instructionsPerImageSizePerCompressionFactor").getN()));
+    }
+    
+    log("ImageCompressionCache: " + ImageCompressionCache);
   }
 
   public String getInstanceURL(String type, Map<String, String> parameters) {
+    dynamoDBCounter++;
+    log(String.format("Updated dynamoDBCounter: (%s/5)", dynamoDBCounter));
+    if (dynamoDBCounter == 5) {
+      dynamoDBCounter = 0;
+      updateDynamoDBCache();
+    }
+
     Integer instructions = 0;
     switch (type) {
       case "FoxesAndRabbits":
@@ -111,11 +149,6 @@ public class LoadBalancer {
       }
     }
 
-    // If more than half the instances have estimations of instructions, use them.
-    // Otherwise, go with a round-robin approach
-    int size = instanceUsage.size();
-    boolean hasEstimations = Collections.frequency(instanceInstructionsCount.values(), -1d) < size / 2;
-
     for (Instance instance : instanceInstructionsCount.keySet()) {
       if (!instanceUsage.containsKey(instance)) {
         instanceInstructionsCount.remove(instance);
@@ -127,6 +160,7 @@ public class LoadBalancer {
       // Do a round robin on the instances, sorted by cpu usage so that the first ones
       // are the ones with the lowest usage
 
+      int size = instanceUsage.size();
       List<Instance> instancesSorted = new ArrayList<>(instanceUsage.keySet());
       Collections.sort(instancesSorted, Comparator.comparingDouble(instanceUsage::get));
       if (lastSize != size) {
@@ -186,24 +220,10 @@ public class LoadBalancer {
     int world = Integer.parseInt(parameters.get("world"));
     // int n_scenario = Integer.parseInt(parameters.get("scenario"));
 
-    // Get data from the db
-    HashMap<String, Condition> scanFilter = new HashMap<String, Condition>();
-
-    scanFilter.put(
-        "world",
-        new Condition()
-            .withComparisonOperator(ComparisonOperator.EQ.toString())
-            .withAttributeValueList(new AttributeValue().withN(Integer.toString(world))));
-
-    ScanResult result = dynamoDBGetter.getDynamoDB("FoxesAndRabbits", scanFilter);
-    if (result.getItems().size() == 0) {
+    Float instructionsPerGeneration = FoxesAndRabbitsCache.get(world);
+    if (instructionsPerGeneration == null) {
       return -1;
     }
-
-    log("Result: " + result);
-
-    Float instructionsPerGeneration =
-        Float.parseFloat(result.getItems().get(0).get("instructionsPerGeneration").getN());
 
     Integer instructions = Math.round(instructionsPerGeneration * n_generations);
     log("Instructions (estimate): " + instructions);
@@ -230,25 +250,10 @@ public class LoadBalancer {
     float width = bi.getWidth();
     float height = bi.getHeight();
 
-    // Get data from the db
-    HashMap<String, Condition> scanFilter = new HashMap<String, Condition>();
-
-    scanFilter.put(
-        "format",
-        new Condition()
-            .withComparisonOperator(ComparisonOperator.EQ.toString())
-            .withAttributeValueList(new AttributeValue(format)));
-
-    ScanResult result = dynamoDBGetter.getDynamoDB("ImageCompression", scanFilter);
-    if (result.getItems().size() == 0) {
+    Float instructionsPerImageSizePerCompressionFactor = ImageCompressionCache.get(format);
+    if (instructionsPerImageSizePerCompressionFactor == null) {
       return -1;
     }
-
-    log("Result: " + result);
-
-    Float instructionsPerImageSizePerCompressionFactor =
-        Float.parseFloat(
-            result.getItems().get(0).get("instructionsPerImageSizePerCompressionFactor").getN());
 
     Integer instructions =
         Math.round(
@@ -263,19 +268,10 @@ public class LoadBalancer {
     int army1 = Integer.parseInt(parameters.get("army1"));
     int army2 = Integer.parseInt(parameters.get("army2"));
 
-    // Get data from the db
-    HashMap<String, Condition> scanFilter = new HashMap<String, Condition>();
-
-    ScanResult result = dynamoDBGetter.getDynamoDB("InsectWars", scanFilter);
-    if (result.getItems().size() == 0) {
+    Float instructionsPerRoundPerSizeTimesRatio = InsectWarsCache;
+    if (instructionsPerRoundPerSizeTimesRatio == null) {
       return -1;
     }
-
-    log("Result: " + result);
-
-    Float instructionsPerRoundPerSizeTimesRatio =
-        Float.parseFloat(
-            result.getItems().get(result.getItems().size() - 1).get("instructionsPerRoundPerSizeTimesRatio").getN());
 
     Integer instructions = Math.round(instructionsPerRoundPerSizeTimesRatio * max * (army1 + army2));
     log("Instructions (estimate): " + instructions);
@@ -315,6 +311,7 @@ public class LoadBalancer {
       int responseCode;
       String response;
       String server = getInstanceURL(whereFrom, parameters);
+      // server = "aaaa";
       if (server == null) {
         return;
 
@@ -404,6 +401,7 @@ public class LoadBalancer {
         int responseCode;
         String response;
         String server = getInstanceURL(whereFrom, parameters);
+        // server = "aaaa";
         if (server == null) {
           return;
 
