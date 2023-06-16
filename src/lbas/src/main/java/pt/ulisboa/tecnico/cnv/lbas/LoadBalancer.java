@@ -55,6 +55,7 @@ public class LoadBalancer {
     this.instanceUsage = instances;
     this.instanceCount = instanceCount;
     this.instanceAvailableCount = instanceAvailableCount;
+    this.instanceInstructionsCount = new ConcurrentHashMap<>();
   }
 
   public void serveForever() {
@@ -139,8 +140,9 @@ public class LoadBalancer {
       return "lambda";
     }
 
+    // Update estimations for instances
     for (Instance instance : instanceUsage.keySet()) {
-      instanceInstructionsCount.putIfAbsent(instance, -1d);
+      instanceInstructionsCount.putIfAbsent(instance, 0d);
     }
     for (Instance instance : instanceInstructionsCount.keySet()) {
       if (!instanceUsage.containsKey(instance)) {
@@ -148,16 +150,13 @@ public class LoadBalancer {
       }
     }
 
-    for (Instance instance : instanceInstructionsCount.keySet()) {
-      if (!instanceUsage.containsKey(instance)) {
-        instanceInstructionsCount.remove(instance);
-      }
-    }
+    log("Estimation of instructions: " + instructions);
 
     if (instructions == -1) {
 
       // Do a round robin on the instances, sorted by cpu usage so that the first ones
       // are the ones with the lowest usage
+      log("No instruction estimations, doing round robin");
 
       int size = instanceUsage.size();
       List<Instance> instancesSorted = new ArrayList<>(instanceUsage.keySet());
@@ -176,6 +175,7 @@ public class LoadBalancer {
       // Idea: sort the instances by number of instructions ran
       // If a workload "fits" in an instance, use it
       // This will compact the number of instances as much as possible
+      log("Instruction estimations detected, trying to be smarter");
 
       List<Instance> instancesSorted = new ArrayList<>(instanceInstructionsCount.keySet());
       Collections.sort(instancesSorted, Comparator.comparingDouble(instanceInstructionsCount::get));
@@ -225,7 +225,6 @@ public class LoadBalancer {
     }
 
     Integer instructions = Math.round(instructionsPerGeneration * n_generations);
-    log("Instructions (estimate): " + instructions);
 
     return instructions;
   }
@@ -257,7 +256,6 @@ public class LoadBalancer {
     Integer instructions =
         Math.round(
             instructionsPerImageSizePerCompressionFactor * width * height * compressionFactor);
-    log("Instructions (estimate): " + instructions);
 
     return instructions;
   }
@@ -274,7 +272,6 @@ public class LoadBalancer {
 
     Integer instructions =
         Math.round(instructionsPerRoundPerSizeTimesRatio * max * (army1 + army2));
-    log("Instructions (estimate): " + instructions);
 
     return instructions;
   }
