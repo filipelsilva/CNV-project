@@ -15,7 +15,7 @@ aws lambda create-function \
         --zip-file fileb://$DIR/../webserver/webserver/target/webserver-1.0.0-SNAPSHOT-jar-with-dependencies.jar \
         --handler pt.ulisboa.tecnico.cnv.compression.CompressImageHandlerImpl::handleRequest \
         --runtime java11 \
-        --timeout 5 \
+        --timeout 600 \
         --memory-size 256 \
         --role arn:aws:iam::$AWS_ACCOUNT_ID:role/lambda-role
 
@@ -24,7 +24,7 @@ aws lambda create-function \
         --zip-file fileb://$DIR/../webserver/webserver/target/webserver-1.0.0-SNAPSHOT-jar-with-dependencies.jar \
         --handler pt.ulisboa.tecnico.cnv.foxrabbit.SimulationHandler::handleRequest \
         --runtime java11 \
-        --timeout 5 \
+        --timeout 600 \
         --memory-size 256 \
         --role arn:aws:iam::$AWS_ACCOUNT_ID:role/lambda-role
 
@@ -33,6 +33,6 @@ aws lambda create-function \
         --zip-file fileb://$DIR/../webserver/webserver/target/webserver-1.0.0-SNAPSHOT-jar-with-dependencies.jar \
         --handler pt.ulisboa.tecnico.cnv.insectwar.WarSimulationHandler::handleRequest \
         --runtime java11 \
-        --timeout 5 \
+        --timeout 600 \
         --memory-size 256 \
         --role arn:aws:iam::$AWS_ACCOUNT_ID:role/lambda-role
