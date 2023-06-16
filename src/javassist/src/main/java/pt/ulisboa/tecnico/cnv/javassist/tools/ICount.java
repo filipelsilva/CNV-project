@@ -188,8 +188,8 @@ public class ICount extends CodeDumper {
     if (ratio == 0) {
       ratio = 0.1f;
     }
-    Float instructionsPerRoundPerSizeTimesRatio = 5_000 *
-        (float) getThreadInfo(threadID) / ((float)max * (float)(sz1 + sz2) * ratio);
+    Float instructionsPerRoundPerSizeTimesRatio =
+        5_000 * (float) getThreadInfo(threadID) / ((float) max * (float) (sz1 + sz2) * ratio);
 
     // Update local cache map with info
     if (InsectWarsCache == null) {

@@ -1,7 +1,6 @@
 package pt.ulisboa.tecnico.cnv.lbas;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
 import com.amazonaws.services.dynamodbv2.model.Condition;
 import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import com.amazonaws.services.ec2.model.Instance;
@@ -103,7 +102,7 @@ public class LoadBalancer {
           entry.get("format").getS(),
           Float.parseFloat(entry.get("instructionsPerImageSizePerCompressionFactor").getN()));
     }
-    
+
     log("ImageCompressionCache: " + ImageCompressionCache);
   }
 
@@ -273,7 +272,8 @@ public class LoadBalancer {
       return -1;
     }
 
-    Integer instructions = Math.round(instructionsPerRoundPerSizeTimesRatio * max * (army1 + army2));
+    Integer instructions =
+        Math.round(instructionsPerRoundPerSizeTimesRatio * max * (army1 + army2));
     log("Instructions (estimate): " + instructions);
 
     return instructions;
