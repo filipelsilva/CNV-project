@@ -194,7 +194,7 @@ public class AutoScaler {
           instanceCountLocal++;
           if (systemStatus.equals("ok")) {
             instanceAvailableCountLocal++;
-            instanceUsage.put(instance, -1d);
+            instanceUsage.put(instance, 0d);
 
             if (datapoints.size() != 0) {
               Double cpuUtil = datapoints.get(datapoints.size() - 1).getAverage();
@@ -238,7 +238,7 @@ public class AutoScaler {
         return;
       }
 
-      avgCPU /= (double) instanceAvailableCountLocal;
+      avgCPU /= (double) instanceCountLocal;
       log("Average CPU utilization = " + avgCPU);
 
       log("-------------------------------------------");
