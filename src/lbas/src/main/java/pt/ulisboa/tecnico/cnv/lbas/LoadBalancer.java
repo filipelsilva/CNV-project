@@ -44,6 +44,7 @@ public class LoadBalancer {
   private int lastSize = 0;
 
   private int dynamoDBCounter = -1;
+  private static final int DYNAMODB_CACHE = 5;
   private static Map<Integer, Float> FoxesAndRabbitsCache = new HashMap<>();
   private static Map<String, Float> ImageCompressionCache = new HashMap<>();
   private static Float InsectWarsCache = null;
@@ -110,7 +111,7 @@ public class LoadBalancer {
   public String getInstanceURL(String type, Map<String, String> parameters) {
     dynamoDBCounter++;
     log(String.format("Updated dynamoDBCounter: (%s/5)", dynamoDBCounter));
-    if (dynamoDBCounter == 5) {
+    if (dynamoDBCounter == DYNAMODB_CACHE) {
       dynamoDBCounter = 0;
       updateDynamoDBCache();
     }

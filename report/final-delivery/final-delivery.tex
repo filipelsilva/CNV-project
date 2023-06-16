@@ -92,16 +92,15 @@ An overview of the steps taken to deploy this system is as follows:
         cost relatively to EC2 instances.
 \end{enumerate}
 
-% TODO diagram
-
 \subsection{Javassist}
 
-The Javassist module consists of two main parts: the \textit{ICount} tool,
-modified to report the instruction count per thread (because the workload is
-multithreaded); and the \textit{AmazonDynamoDBConnector} class, which consists
-of a custom connector to the Amazon DynamoDB, a key-value store, used to create
-and send items to DymanoDB. These will be used to keep certain information about
-the program we will run it with.
+The Javassist module consists of the \textit{ICount} tool, modified to report
+the instruction count per thread (because the workload is multithreaded). It
+also used to have the \textit{AmazonDynamoDBConnector} class, which consists of
+a custom connector to the Amazon DynamoDB, a key-value store, used to create and
+send items to DymanoDB. These will be used to keep certain information about the
+program we will run it with. However, it has been moved to the
+\textit{Webserver}, and we will explain this decision there.
 
 This module is then ran with the \textit{webserver}, and allows to know how many
 instructions were ran for a specific scenario of it, by intercepting each one of
@@ -120,8 +119,8 @@ the functions that correspond to a scenario:
 \end{itemize}
 
 The number of instructions per thread is saved on a map, and then metrics are
-created according to each scenario, and then sent to DynamoDB in order to be
-read later by the Load Balancer, in order to choose an EC2 instance to send the
+created according to each scenario and sent to DynamoDB in order to be read
+later by the Load Balancer, in order to choose an EC2 instance to send the
 request to.
 
 In order to keep the number of requests to DynamoDB to a minimum, we only
@@ -163,26 +162,95 @@ metrics count for 50\% of the new metric, and all the older metrics count for
 the other 50\%. This gives us more adaptability to each workload according to
 the conditions.
 
+\textbf{Note:} the metrics are sent to DynamoDB just as is said above; however,
+they are sent using the \textit{Webserver} and not this package. It used to be
+this way but not anymore (again, we will explain this decision on the
+\textit{Webserver} section).
+
+We chose to keep this section here because it made
+more sense to talk about the metrics collected in the section where we talk
+about getting the information used to create these.
+
+So, in conclusion, this module is used to get the number of instructions,
+calculate the metrics, and then it sends them to a text file
+\textit{/tmp/dynamodb} every \textit{BATCH\_SIZE} requests, where the
+\textit{Webserver} will collect and send them.
+
 \subsection{\textit{LBAS}}
 
 \subsubsection{General}
 
-% TODO diagram
+An overview of the \textit{LBAS} operation:
+\begin{enumerate}
+    \item Creation of a \textit{HashMap} to keep track of the EC2 instances and
+        their respective CPU utilizations, alongside two \textit{AtomicInteger}s
+        to know how many instances we have (both created and available, as one
+        can still be initializing).
+    \item Creation of the \textit{AutoScaler} and \textit{LoadBalancer}: while
+        the load balancer will work as a webserver, responding to endpoint
+        requests, the auto scaler will be running every
+        \textit{DELAY\_AUTOSCALER} seconds (default: 10 seconds).
+\end{enumerate}
 
-falar do endpoint de test
+\subsubsection{\textit{Load Balancer}}
 
-\subsubsection{Load Balancer}
+Our goal for the load balancer is to distribute the load as evenly as possible
+across all instances, in order to keep the number of new instances as low as
+possible.
 
-% TODO
-Regarding the load balancer, our goal is to distribute the load as evenly as
-possible across all nodes, in order to keep the number of nodes spawned at a
-minimum. It can also choose to serve a request using a Lambda instead of a
-nodes: this option is more expensive, however it makes up for it for the speed
-in startup. Especially when the system is under load and more requests are being
-made while the LB spawns more nodes, Lambdas will be a good option to support
-users while the system is still trying to scale up.
+As stated before, the load balancer works as an webserver (much alike the actual
+webserver we instrumentalized), and also has a \textit{/test} endpoint in order
+to do a sanity check of its operations.
 
-\subsubsection{Auto Scaler}
+Its process goes as follows:
+\begin{enumerate}
+    \item Create endpoints with the same names as our workload.
+    \item For each request, analyse the parameters given, and calculate an
+        estimation of the number of instances that request will take, using data
+        gotten from DymanoDB.
+        \subitem \textbf{Note:} we keep the metrics in a local cache (using Java
+        structures as in the \textit{ICount} class stated before), and only
+        every \textit{DYNAMODB\_CACHE} (default: 5) requests do we fetch data
+        from DynamoDB. This helps us reduce the latency introduced by going to
+        the database every request.
+        \subitem \textbf{Note:} if there are no metrics available, the
+        estimation will be -1. See below for a better explanation of this
+        scenario.
+    \item Using this estimation, select the instance to send the request to.
+    \item Act as a proxy: send the request and receive the response, then
+        forward the response back to the client.
+\end{enumerate}
+
+For the instance selection, we need to keep in mind two scenarios:
+\begin{enumerate}
+    \item There are no metrics available yet: the system just started or is in
+        its first requests. In this case, we will choose an instance using
+        round-robin: we sort the instances by their CPU average usage (more on
+        that in the \textit{Auto Scaler} section), and then iterate through
+        these as more requests come by: the instances with least CPU usage will
+        be chosen first. Once the map containing the instances and usages is
+        updated, so will this list.
+    \item There are metrics available: we apply a best-effort algorithm, where
+        we sort the instances by the number of instructions (estimated) that it
+        has already done, and go from the instance with more instructions ran to
+        the one with least ones, trying to "fit" these new instructions in it.
+
+        We associate the instructions ran already with the CPU usage for each
+        instance, and then estimate the CPU usage for that request: if the sum
+        of the usage for the instance and the estimated usage for the request
+        is under 100\%, we assign the request to that instance. That will lead
+        to a smaller number of instances being created.
+\end{enumerate}
+
+On specific scenarios, we resort to using a Lambda function instead of a node:
+this option is more expensive, however it makes up for it for the speed in
+startup compared to the time an instance takes to start up.
+
+Especially when the system is under load and more requests are being made while
+the LB spawns more nodes, Lambdas will be a good option to support users while
+the system is still trying to scale up.
+
+\subsubsection{\textit{Auto Scaler}}
 
 % TODO
 Regarding the auto scaler, the metric we will keep in mind is the average CPU
