@@ -4,6 +4,7 @@ import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javassist.CannotCompileException;
 import javassist.CtBehavior;
 import pt.ulisboa.tecnico.cnv.javassist.AmazonDynamoDBConnector;
@@ -20,6 +21,20 @@ public class ICount extends CodeDumper {
   private static int worldFoxesRabbits = 0;
   private static Map<Long, Long> ninstsPerThread = new HashMap<>();
   private static AmazonDynamoDBConnector dynamoDBConnector = new AmazonDynamoDBConnector();
+
+  private static final Set<String> ignoredMethods =
+      Set.of(
+          "filter",
+          "registerApplicationClasspathSpis",
+          "unsetOrdering",
+          "equals",
+          "dispose",
+          "readUTF",
+          "length",
+          "getRenderedImage",
+          "hasRaster",
+          "finalize",
+          "getRaster");
 
   public ICount(List<String> packageNameList, String writeDestination) {
     super(packageNameList, writeDestination);
@@ -208,7 +223,9 @@ public class ICount extends CodeDumper {
 
   @Override
   protected void transform(CtBehavior behavior) throws Exception {
-    super.transform(behavior);
+    if (!ignoredMethods.contains(behavior.getName())) {
+      super.transform(behavior);
+    }
     switch (behavior.getName()) {
       case "process":
         behavior.insertAfter(
