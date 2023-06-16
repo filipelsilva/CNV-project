@@ -44,7 +44,7 @@ public class ICount extends CodeDumper {
     return counter;
   }
 
-    public static void incCounter() {
+  public static void incCounter() {
     counter += 1;
     System.out.println(
         String.format("[ICount] Incrementing counter: (%s/%s)...", counter, BATCH_SIZE));
@@ -56,30 +56,32 @@ public class ICount extends CodeDumper {
       // Update data on dynamoDB (indirectly; the report will explain this)
       System.out.println("[ICount] Updating estimations...");
       try {
-          FileWriter fileWriter = new FileWriter("/tmp/dynamodb");
+        FileWriter fileWriter = new FileWriter("/tmp/dynamodb");
 
-          System.out.println("[ICount] Updating FoxesAndRabbitsCache...");
-          for (Map.Entry<Integer, Float> entry : FoxesAndRabbitsCache.entrySet()) {
-              fileWriter.write(String.format("FoxesAndRabbits %s %s\n", entry.getKey(), entry.getValue()));
-          }
-      
-          System.out.println("[ICount] Updating ImageCompressionCache...");
-          for (Map.Entry<String, Float> entry : ImageCompressionCache.entrySet()) {
-              fileWriter.write(String.format("ImageCompression %s %s\n", entry.getKey(), entry.getValue()));
-          }
+        System.out.println("[ICount] Updating FoxesAndRabbitsCache...");
+        for (Map.Entry<Integer, Float> entry : FoxesAndRabbitsCache.entrySet()) {
+          fileWriter.write(
+              String.format("FoxesAndRabbits %s %s\n", entry.getKey(), entry.getValue()));
+        }
 
-          System.out.println("[ICount] Updating InsectWarsCache...");
-          if (InsectWarsCache != null) {
-              fileWriter.write(String.format("InsectWars %s\n", InsectWarsCache));
-          }
+        System.out.println("[ICount] Updating ImageCompressionCache...");
+        for (Map.Entry<String, Float> entry : ImageCompressionCache.entrySet()) {
+          fileWriter.write(
+              String.format("ImageCompression %s %s\n", entry.getKey(), entry.getValue()));
+        }
 
-          System.out.println("[ICount] Updated estimations.");
+        System.out.println("[ICount] Updating InsectWarsCache...");
+        if (InsectWarsCache != null) {
+          fileWriter.write(String.format("InsectWars %s\n", InsectWarsCache));
+        }
 
-          // Close the file writer
-          fileWriter.close();
+        System.out.println("[ICount] Updated estimations.");
+
+        // Close the file writer
+        fileWriter.close();
 
       } catch (IOException e) {
-          System.out.println("An error occurred while writing to the file: " + e.getMessage());
+        System.out.println("An error occurred while writing to the file: " + e.getMessage());
       }
     }
   }

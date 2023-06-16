@@ -2,7 +2,7 @@
 
 % ================ PACKAGES ====================
 
-\usepackage[a4paper, left=25mm, right=25mm]{geometry}
+\usepackage[a4paper]{geometry}
 \usepackage[base]{babel}
 \usepackage{lipsum}
 
@@ -269,7 +269,9 @@ Therefore, the auto scaler works as follows:
 \begin{enumerate}
     \item Iterate over every instance that is running. If it is running and the
         \textit{AMI\_ID} is the one for the image \textit{CNV-Webserver}, we get
-        its average CPU usage for the last 60 seconds.
+        its average CPU usage for the last 60 seconds. This average is only
+        taken after the instance started up: we do not count the bootstrapping
+        of the system).
     \item Calculate the average CPU usage of all nodes.
     \item Accordingly scale up or down:
         \subitem If there are no instances, start a new one. However, if one is
@@ -278,10 +280,17 @@ Therefore, the auto scaler works as follows:
         start a new instance.
         \subitem If the average CPU usage is under \textit{MIN\_CPU\_USAGE}, we
         stop the instance with lowest CPU usage. However, it is not stopped
-        right there and then: it is marked for termination, and will only be
-        terminated after \textit{DELAY\_KILL} (default: 60) seconds. This is
-        because we want to make sure that the instance is not needed anymore, it
-        might still be running requests.
+        right there and then:
+        \begin{itemize}
+            \item It is marked for termination (this is done by removing the
+                instance from the map from where instances are chosen,
+                effectively not allowing new requests to be made to it)
+            \item Only after \textit{DELAY\_KILL} (default: 60) seconds will the
+                instance be terminated. This is because we want to make sure
+                that the instance is not needed anymore, it might still be
+                running requests. This way, the user won't notice a degradation
+                of the system, as the requests will still go through to it.
+        \end{itemize}
 \end{enumerate}
 
 \subsection{Scripts}
@@ -316,12 +325,80 @@ security groups, key pairs, etc.
 
 \subsection{\textit{Webserver}}
 
-falar do endpoint de test
+The webserver is the program that will be run in the instances. It was provided
+by the faculty, however it has two main modifications:
+
+\begin{itemize}
+    \item A new endpoint, \textit{/test}, used to do a sanity check on the
+        system if needed. Always returns the parameters provided in the request.
+    \item The addition of the \textit{AmazonDynamoDBConnector} class and a
+        subroutine to operate it, as written before. We will explain this
+        decision now.
+\end{itemize}
+
+\subsubsection{\textit{AmazonDynamoDBConnector}}
+
+For the Image Compression workload, core Java packages are used to compress
+images. These are loaded by a different (primordial) class loader for security
+reasons, and agent's classes are not visible out-of-the-box. In order to have
+more insightful metrics, we need to instrument the core Java classes as well.
+
+However, this caused problems with the ClassLoader, because the DynamoDB
+dependencies (the Amazon SDK for Java) were mixed in with the Javassist package.
+
+In order to fix this while keeping all functionality, we adopted the following
+method:
+
+\begin{itemize}
+    \item As stated before on the \textit{Javassist} section, the class
+        \textit{AmazonDynamoDBConnector} was moved to the \textit{webserver}
+        package.
+    \item Every 5 requests, the instance (using the Javassist tool) will output
+        its data to a file (\textit{/tmp/dynamodb}).
+    \item The webserver, using a scheduled task, retrieves that data from the
+        file every \textit{DELAY\_DYNAMODB} (default: 10) seconds and sends it
+        to DynamoDB.
+\end{itemize}
+
+This is \textbf{not} an optimal solution, but it was the quickest way to keep
+both the metrics and DynamoDB interaction while allowing the Image Compression
+workload to run without error.
 
 \section{Things to improve}
 
-falar de load balancing e esperar para apagar instance
+The program works as expected, however there are some things that could be done
+better if there was more time. Here we write some of them:
+
+\begin{itemize}
+    \item The lambdas don't have instrumentation. This was due to lack of time,
+        but an high-level overview of the feature would be as follows:
+        \subitem The endpoints would receive a new parameter, that warned the
+        instances that that request was to sent right away.
+        \subitem The lambdas would get the data from DynamoDB and then update
+        it, which would incur in some latency but with the tradeoff of having
+        more data to work with. This is because lambdas are used in a one-off
+        fashion, which means they cannot gather multiple metrics to batch in an
+        operation to the database.
+    \item In the \textit{AutoScaler}, we could employ a better way of deleting
+        instances, instead of just marking them for termination and waiting for
+        the amount of seconds defined in a variable. We could make the instance
+        return something that would indicate that it is ready to be deleted, and
+        only then delete it.
+    \item Also in the \textit{AutoScaler}, we could scale more than one machine
+        at a time. This could be done in a scale coresponding to a percentage of
+        the number of instances already up (20\%), for example, but due to a
+        lack of time we did not implement this.
+    \item The load balancing algorithm could be improved, to be more complex and
+        aware of various metrics, such as the real instructions ran on each
+        instance. This would lead to a more efficient system, but it would
+        require more modifications to the \textit{webserver} package.
+\end{itemize}
 
 \section{Conclusion}
+
+This was a really interesting project to do, and allowed us to learn more about
+how these systems operate, and how hard it is to create a system that is
+reliable, scalable and efficient, without the end user being aware of this
+complexity.
 
 \end{document}
