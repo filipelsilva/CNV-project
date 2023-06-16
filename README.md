@@ -13,12 +13,15 @@ security group.
 
 4. `cd src/scripts`
 
-5. To create the images, `./create-image.sh webserver` and `./create-image.sh
+5. To run the system, `./launch-deployment.sh`. You can also replicate the steps
+as shown below:
+
+* To create the images, `./create-image.sh webserver` and `./create-image.sh
 lbas`. To avoid errors, please create the *webserver* image first. The *lbas*
 image might create an extra instance, you can delete it if you want, or keep it
 for further usage in the deployment.
 
-6. To create the lambdas to use in the deployment, `./create-lambda.sh`.
+* To create the lambdas to use in the deployment, `./create-lambda.sh`.
 `./destroy-lambda.sh` will delete them.
 
-7. To launch the whole deployment, `./launch-vm.sh CNV-LBAS`
+* To launch the whole deployment, `./launch-vm.sh CNV-LBAS`
