@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Syntax:  ./testinsect.sh <ip> <port> <max> <army1> <army2>
 # Example: ./testinsect.sh 127.0.0.1 8000 1000 10 10

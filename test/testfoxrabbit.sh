@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Syntax:  ./testfoxrabbit.sh <ip> <port> <generations> <world> <scenario>
 # Example: ./testfoxrabbit.sh 127.0.0.1 8000 1000 4 2
