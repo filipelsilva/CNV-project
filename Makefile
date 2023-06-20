@@ -10,3 +10,8 @@ javassist:
 
 lbas:
 	(cd src/lbas && mvn clean install)
+
+clean:
+	(cd src/webserver && mvn clean)
+	(cd src/javassist && mvn clean)
+	(cd src/lbas && mvn clean)
